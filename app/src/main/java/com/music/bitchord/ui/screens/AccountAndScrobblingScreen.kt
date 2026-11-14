@@ -125,23 +125,6 @@ fun AccountAndScrobblingScreen(
             }
         }
 
-        SettingsGroup(
-            header = stringResource(R.string.rich_presence),
-            footer = stringResource(R.string.rich_presence_footer),
-        ) {
-            SettingsRow(
-                icon = ImageVector.vectorResource(R.drawable.ic_discord),
-                title = "Discord",
-                subtitle = when {
-                    discordToken.isEmpty() -> stringResource(R.string.tap_to_connect)
-                    !discordRpcEnabled -> stringResource(R.string.connected_presence_off)
-                    discordUsername.isNotEmpty() -> stringResource(R.string.sharing_as, discordUsername)
-                    else -> stringResource(R.string.sharing_listens)
-                },
-                onClick = onOpenDiscord,
-            )
-        }
-
         if (AppSettings.scrobblingAvailable) {
             SettingsGroup(
                 header = stringResource(R.string.scrobbling),
