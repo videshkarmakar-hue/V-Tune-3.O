@@ -71,7 +71,7 @@
         android:required="false" />
 
     <application
-        android:name=".Vtune3Application"
+        android:name=".BitChordApplication"
         android:allowBackup="true"
         android:appCategory="audio"
         android:banner="@drawable/tv_banner"
@@ -83,7 +83,7 @@
         android:localeConfig="@xml/locales_config"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Vtune3"
+        android:theme="@style/Theme.BitChord"
         tools:targetApi="34">
 
         <!--
@@ -297,7 +297,7 @@
             android:label="@string/app_name"
             android:launchMode="singleTask"
             android:screenOrientation="landscape"
-            android:theme="@style/Theme.Vtune3.Tv" />
+            android:theme="@style/Theme.BitChord.Tv" />
 
         <service
             android:name=".playback.PlaybackService"

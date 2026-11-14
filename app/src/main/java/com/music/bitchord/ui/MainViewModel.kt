@@ -11,6 +11,7 @@ import com.music.bitchord.auth.YouTubeProfile
 import com.music.bitchord.auth.profileId
 import com.music.bitchord.auth.sessionId
 import com.music.bitchord.auth.adjacentProfile
+import com.music.bitchord.data.AppUpdateChecker
 import com.music.bitchord.data.LocalMediaRepository
 import com.music.bitchord.data.LikeState
 import com.music.bitchord.data.YtMusicRepository
@@ -662,7 +663,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
 
-    //// ---- Ratings, library and playlists -------------------------------------
+    /** Set once per launch if GitHub has a release newer than this build. */
+    val updateAvailable: StateFlow<AppUpdateChecker.UpdateInfo?> = AppUpdateChecker.available
+
+    // ---- Ratings, library and playlists -------------------------------------
 
     /**
      * Ratings this session has set, which win over whatever the library feed
@@ -1506,6 +1510,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 .collect { reloadRemoteDetail(com.music.bitchord.data.smb.SmbConfig.BROWSE_ID) }
         }
         viewModelScope.launch {
+            // A leftover APK only means "Install Now" for the session that
+            // downloaded it — see AppUpdateChecker.clearCache.
+            AppUpdateChecker.clearCache(getApplication())
+            AppUpdateChecker.check()
         }
     }
 

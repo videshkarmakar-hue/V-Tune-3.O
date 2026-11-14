@@ -69,7 +69,7 @@ val addonAuthServer: String = (
 val betaSuffix = rootProject.extra["bitchordBetaSuffix"] as String
 
 android {
-    namespace = "com.videshkarmakar.vtune3"
+    namespace = "com.music.bitchord"
     // InnerTubeX's AAR requires compiling against 37; targetSdk (runtime behaviour) stays 36.
     compileSdk = 37
 
@@ -100,7 +100,7 @@ android {
         // Which release assets are this app's: the phone and TV APKs ship in
         // the same GitHub release, told apart by file name. See
         // AppUpdateChecker.apkAssetUrl.
-        buildConfigField("String", "UPDATE_APK_PREFIX", "\"V-Tune 3.O-\"")
+        buildConfigField("String", "UPDATE_APK_PREFIX", "\"V-Tune-\"")
     }
 
     splits {

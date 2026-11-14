@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.music.bitchord.BuildConfig
+import com.music.bitchord.data.AppUpdateChecker
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.TvSettings
 import com.music.bitchord.ui.MainViewModel
@@ -92,6 +93,7 @@ fun TvSettingsScreen(
 
     var blurb by remember { mutableStateOf(DefaultBlurb) }
     var sheet by remember { mutableStateOf<SettingsSheet?>(null) }
+    val update by AppUpdateChecker.available.collectAsState()
 
     Row(
         modifier = modifier

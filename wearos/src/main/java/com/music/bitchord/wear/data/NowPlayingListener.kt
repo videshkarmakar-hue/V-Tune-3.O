@@ -37,19 +37,19 @@ class NowPlayingListener : WearableListenerService() {
     override fun onMessageReceived(event: MessageEvent) {
         val path = event.path ?: return
         when {
-            
+            path == P.PATH_WATCH_INFO_REQUEST -> SelfUpdate.publishInfo(this)
             path.startsWith(P.PATH_SPEAKER + "/") -> Speaker.handle(this, path.substringAfterLast('/'), event.data)
         }
     }
 
-    /** Called when a channel is opened from the phone. */
+    /** A newer build of this app, sent by the phone's "BitChord for Wear OS" settings. */
     override fun onChannelOpened(channel: ChannelClient.Channel) {
-        
+        if (channel.path == P.PATH_APK) SelfUpdate.receive(this, channel)
     }
 
-    /** Play services has finished writing what was requested. */
+    /** Play services has finished writing what [SelfUpdate.receive] asked it for. */
     override fun onInputClosed(channel: ChannelClient.Channel, closeReason: Int, appSpecificErrorCode: Int) {
-        
+        if (channel.path == P.PATH_APK) SelfUpdate.onReceived(this, channel, closeReason)
     }
 
     override fun onDataChanged(events: DataEventBuffer) {

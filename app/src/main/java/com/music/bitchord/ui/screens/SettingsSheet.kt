@@ -131,14 +131,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.viewinterop.AndroidView
 import com.music.bitchord.AppIcon
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.LinkAnnotation
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -1488,7 +1483,13 @@ fun SettingsScreen(
         // Only in a build that carries the watch app — see app/build.gradle.kts.
         // On the main page it is listed with the categories; here it answers
         // a search.
-        
+        if (searching && watchAvailable) {
+            SearchableSettingsGroup(search) {
+                row(stringResource(R.string.wear_os_section), "watch", "wear os", "galaxy watch", "pixel watch", "install") {
+                    WearOsSettingsRow(onClick = onWearOs)
+                }
+            }
+        }
 
         if (shows(SettingsCategory.YOUR_DATA)) SearchableSettingsGroup(search, header = stringResource(R.string.your_data)) {
             val replayTitle = stringResource(R.string.replay)
@@ -1782,253 +1783,9 @@ fun SettingsScreen(
         // The version line is the page's colophon, not a setting: it belongs to
         // the whole list, so it goes when the list is narrowed to a few rows.
         if (section == null && searchQuery.isBlank()) {
-        Text(
-            text = buildAnnotatedString {
-                append("bitchord $version  ")
-                val linkStyles = TextLinkStyles(
-                    style = SpanStyle(
-                        color = MaterialTheme.colorScheme.primary,
-                        textDecoration = TextDecoration.Underline,
-                    ),
-                )
-            },
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 24.dp, bottom = 8.dp),
-        )
-        // Check for Updates Slot
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp, 8.dp),
-            elevation = 1.dp,
-            colors = CardDefaults.elevationColors(
-                defaultColor = MaterialTheme.colorScheme.surface,
-            ),
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                horizontalAlignment = Alignment.Start,
-            ) {
-                Text(
-                    text = "Check for Updates",
-                    style = MaterialTheme.typography.h6,
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = Center,
-                )
-                Text(
-                    text = "V-Tune 3.O is up-to-date. You already have the latest version 1.0.0.",
-                    style = MaterialTheme.typography.body1,
-                    textAlign = Center,
-                )
-                // Check for Updates button
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    content = {
-                        Button(
-                            onClick = {},
-                            enabled = false,
-                            backgroundColor = MaterialTheme.colorScheme.surface,
-                        ) {
-                            Text(
-                                "Check for Update",
-                                style = MaterialTheme.typography.body1,
-                            )
-                        }
-                    }
-                )
-            }
-        }
-        // Developer Credits Section
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp, 8.dp),
-            elevation = 1.dp,
-            colors = CardDefaults.elevationColors(
-                defaultColor = MaterialTheme.colorScheme.surface,
-            ),
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                horizontalAlignment = Alignment.Start,
-            ) {
-                Text(
-                    text = "DEVELOPER CREDITS",
-                    style = MaterialTheme.typography.h6,
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center,
-                )
-                // Developer Image
-                Box(
-                    modifier = Modifier
-                        .size(80.dp, 80.dp)
-                        .clip(CircleShape),
-                    content = {
-                        // Note: Image loading would use Coil or similar;
-                        // placeholder shows developer initials
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    MaterialTheme.colorScheme.onSurface,
-                                    CircleShape,
-                                ),
-                            content = {
-                                Text(
-                                    "VK",
-                                    style = MaterialTheme.typography.h5,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    align = TextAlign.Center,
-                                )
-                            }
-                        )
-                    },
-                )
-                // Developer Info
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterStart,
-                ) {
-                    Text(
-                        text = "Crafted With Vision. Built With Purpose.",
-                        style = MaterialTheme.typography.body1,
-                        textAlign = Center,
-                    )
-                    Text(
-                        text = "Videsh Karmakar",
-                        style = MaterialTheme.typography.subtitle1,
-                        fontWeight = FontWeight.W600,
-                        textAlign = Center,
-                    )
-                    Text(
-                        text = "Founder · Developer · UI/UX Designer",
-                        style = MaterialTheme.typography.body2,
-                        textAlign = Center,
-                    )
-                }
-                // Divider
-                Divider(modifier = Modifier.padding(8.dp).height(1.dp)))
-                // Developer Quote
-                Text(
-                    text = "V-Tune 3.0 is proudly conceptualized, designed, and developed by Videsh Karmakar — bringing together software engineering, product design, and a passion for music to create a refined and seamless music-listening experience.",
-                    style = MaterialTheme.typography.body2,
-                    textAlign = Center,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                // Connect With Developer
-                Text(
-                    text = "CONNECT WITH THE DEVELOPER",
-                    style = MaterialTheme.typography.body1,
-                    fontWeight = FontWeight.W600,
-                    textAlign = Center,
-                )
-                // Connect options row
-                Row(
-                    modifier = Modifier.padding(8.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    // Official Website
-                    Box(modifier = Modifier.size(40.dp)) {
-                        Text(
-                            "Website",
-                            style = MaterialTheme.typography.caption,
-                        )
-                    }
-                    // Spotify
-                    Box(modifier = Modifier.size(40.dp)) {
-                        Text(
-                            "Spotify",
-                            style = MaterialTheme.typography.caption,
-                        )
-                    }
-                    // Instagram
-                    Box(modifier = Modifier.size(40.dp)) {
-                        Text(
-                            "Instagram",
-                            style = MaterialTheme.typography.caption,
-                        )
-                    }
-                    // YouTube
-                    Box(modifier = Modifier.size(40.dp)) {
-                        Text(
-                            "YouTube",
-                            style = MaterialTheme.typography.caption,
-                        )
-                    }
-                    // Facebook
-                    Box(modifier = Modifier.size(40.dp)) {
-                        Text(
-                            "Facebook",
-                            style = MaterialTheme.typography.caption,
-                        )
-                    }
-                }
-                // Development & Design
-                Text(
-                    text = "DEVELOPMENT & DESIGN",
-                    style = MaterialTheme.typography.body1,
-                    fontWeight = FontWeight.W600,
-                    textAlign = Center,
-                )
-                Text(
-                    text = "Product: V-Tune 3.0 — Music, Without the Limits.",
-                    style = MaterialTheme.typography.body2,
-                    textAlign = Center,
-                )
-                Text(
-                    text = "Developed & Designed By: Videsh Karmakar",
-                    style = MaterialTheme.typography.body2,
-                    textAlign = Center,
-                )
-                Text(
-                    text = "Design & Prototyping: Figma · Stitch",
-                    style = MaterialTheme.typography.body2,
-                    textAlign = Center,
-                )
-                Text(
-                    text = "Platform: Android · iOS Coming Soon",
-                    style = MaterialTheme.typography.body2,
-                    textAlign = Center,
-                )
-                // Acknowledgment
-                Divider(modifier = Modifier.padding(8.dp).height(1.dp))
-                Text(
-                    text = "Built independently with a commitment to thoughtful design, modern technology, and a better way to experience music.",
-                    style = MaterialTheme.typography.body2,
-                    textAlign = Center,
-                )
-                Text(
-                    text = "Thank you for being part of V-Tune 3.0.",
-                    style = MaterialTheme.typography.body2,
-                    textAlign = Center,
-                )
-                // Copyright
-                Text(
-                    text = "© 2026 Videsh Karmakar. All Rights Reserved.",
-                    style = MaterialTheme.typography.caption,
-                    textAlign = Center,
-                )
-            }
-        }
-        // Version line
-        if (section == null && searchQuery.isBlank()) {
             Text(
                 text = buildAnnotatedString {
-                    append("bitchord $version  ")
-                    val linkStyles = TextLinkStyles(
-                        style = SpanStyle(
-                            color = MaterialTheme.colorScheme.primary,
-                            textDecoration = TextDecoration.Underline,
-                        ),
-                    )
+                    append("V-Tune 3.O $version")
                     append("\n~YouTube Music & Listen Together Backend")
                 },
                 style = MaterialTheme.typography.labelSmall,
@@ -2037,16 +1794,7 @@ fun SettingsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 24.dp, bottom = 8.dp),
-        )
-    }
-            },
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 24.dp, bottom = 8.dp),
-        )
+            )
         }
     }
 

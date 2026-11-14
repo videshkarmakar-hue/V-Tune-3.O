@@ -70,7 +70,7 @@ val listenTogetherServer: String = (
 val betaSuffix = ""
 
 android {
-    namespace = "com.videshkarmakar.vtune3"
+    namespace = "com.music.bitchord"
     // InnerTubeX's AAR requires compiling against 37; targetSdk (runtime behaviour) stays 36.
     compileSdk = 37
 

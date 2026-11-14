@@ -31,7 +31,7 @@ val signing = Properties().apply {
 val betaSuffix = rootProject.extra["bitchordBetaSuffix"] as String
 
 android {
-    namespace = "com.videshkarmakar.vtune3.wear"
+    namespace = "com.music.bitchord.wear"
     compileSdk = 36
 
     defaultConfig {

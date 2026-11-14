@@ -128,7 +128,7 @@ import com.music.bitchord.auth.DiscordLoginScreen
 import com.music.bitchord.auth.SpotifyLoginScreen
 import com.music.bitchord.auth.WebSessionMode
 import com.music.bitchord.auth.YtMusicLoginScreen
-
+import com.music.bitchord.data.AppUpdateChecker
 import com.music.bitchord.data.LocalMediaRepository
 import com.music.bitchord.data.listentogether.JamInviteLink
 import com.music.bitchord.data.listentogether.ListenTogether
@@ -5431,9 +5431,32 @@ private fun BitChordApp(
             updateNotice?.let { update ->
                 UpdateAvailableDialog(
                     version = update.version,
+                    notes = update.notes,
                     hazeState = hazeState,
+                    // A download in progress keeps running behind the closed
+                    // sheet — only the sheet itself goes away. The top bar's
+                    // update icon reopens it onto whatever state it reached.
                     onDismiss = { showUpdateDialog = false },
-                    onOpenReleasePage = {},
+                    onDownload = {
+                        if (update.apkUrl != null) {
+                            scope.launch { AppUpdateChecker.downloadApk(context) }
+                        } else {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(update.releaseUrl)))
+                            showUpdateDialog = false
+                        }
+                    },
+                    onCancelDownload = {
+                        AppUpdateChecker.cancelDownload()
+                    },
+                    onInstall = {
+                        val ready = AppUpdateChecker.download.value as? AppUpdateChecker.DownloadState.Ready
+                        ready?.let { AppUpdateChecker.installApk(context, it.file) }
+                    },
+                    onOpenReleasePage = {
+                        AppUpdateChecker.resetDownload()
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(update.releaseUrl)))
+                        showUpdateDialog = false
+                    },
                 )
             }
         }

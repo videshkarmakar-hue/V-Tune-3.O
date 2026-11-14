@@ -1,8 +1,9 @@
 package com.music.bitchord.wear
 
 /**
- * Watch entry types kept apart from [WatchInstaller] so the TV build —
- * which replaces that file with a stub — still has the types.
+ * What Settings → "BitChord for Wear OS" draws, kept apart from
+ * [WatchInstaller] so the TV build — which replaces that file with a stub —
+ * still has the types.
  */
 data class WatchEntry(
     /** The Wearable node id: what every message to this watch is addressed to. */

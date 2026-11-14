@@ -43,13 +43,16 @@ import java.util.concurrent.TimeUnit
 import com.music.bitchord.wear.WearProtocol as P
 
 /**
- * Watch pairing setup: this phone's build can be installed on a paired watch
- * via wireless debugging (ADB), without needing the Play Store.
+ * Settings → "BitChord for Wear OS": which watches have BitChord, whether it is
+ * this phone's build, and putting it there without a computer.
  *
  * The phone APK carries the watch APK of the same flavor and signing key
  * (`assets/wear/`, see app/build.gradle.kts), so what it installs always pairs
  * with it and is always the matching version.
  *
+ *  - **Updates** go over the Wearable channel to the watch app already there,
+ *    which hands them to its own package installer — see the watch's
+ *    SelfUpdate. Play services carries the bytes, not this process.
  *  - **The first install** has nothing on the watch to receive it, and outside
  *    the Play Store only ADB can install there. So this phone *is* the ADB
  *    client — libadb-android, over the watch's Wireless debugging on the same
