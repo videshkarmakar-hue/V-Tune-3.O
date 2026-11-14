@@ -98,6 +98,9 @@ object AppUpdateManager {
     private var lastCheckFailed = false
     private var releaseEtag: String? = null
 
+    /** How long a failed check waits before trying again; widened when GitHub says so. */
+    private var failureBackoffMs = FAILURE_RETRY_MS
+
     /** Set only while the user is away on the "install unknown apps" screen. */
     private var awaitingInstallPermission = false
 
@@ -133,7 +136,7 @@ object AppUpdateManager {
         if (_pending.value == null) restorePending(app)
 
         val now = SystemClock.elapsedRealtime()
-        val ttl = if (lastCheckFailed) FAILURE_RETRY_MS else CHECK_TTL_MS
+        val ttl = if (lastCheckFailed) failureBackoffMs else CHECK_TTL_MS
         if (!force && now - lastCheckedAt in 0 until ttl) return@withContext _pending.value
 
         runCatching {
@@ -148,11 +151,16 @@ object AppUpdateManager {
                 if (response.code == 304) {
                     lastCheckedAt = SystemClock.elapsedRealtime()
                     lastCheckFailed = false
+                    failureBackoffMs = FAILURE_RETRY_MS
                     return@withContext _pending.value
                 }
                 if (!response.isSuccessful) {
                     lastCheckedAt = SystemClock.elapsedRealtime()
                     lastCheckFailed = true
+                    // GitHub answers an exhausted anonymous quota with 403/429
+                    // and says when it will reset. Retrying a minute later would
+                    // only spend more of it, so wait the time it asked for.
+                    failureBackoffMs = retryDelayMs(response)
                     return@withContext _pending.value
                 }
 
@@ -169,6 +177,7 @@ object AppUpdateManager {
                 releaseEtag = response.header("ETag") ?: releaseEtag
                 lastCheckedAt = SystemClock.elapsedRealtime()
                 lastCheckFailed = false
+                failureBackoffMs = FAILURE_RETRY_MS
 
                 if (isNewer(latest, installed)) {
                     val current = _pending.value
@@ -216,6 +225,21 @@ object AppUpdateManager {
         _download.value = DownloadState.Idle
         storePending(context, null)
         return true
+    }
+
+    /**
+     * How long to leave GitHub alone after a failed check, in milliseconds.
+     *
+     * `Retry-After` carries seconds and `X-RateLimit-Reset` an epoch timestamp;
+     * either is clamped to half an hour so a skewed header cannot park the
+     * updater for a day.
+     */
+    private fun retryDelayMs(response: okhttp3.Response): Long {
+        val retryAfter = response.header("Retry-After")?.toLongOrNull()?.times(1000L)
+        val resetAt = response.header("X-RateLimit-Reset")?.toLongOrNull()
+            ?.let { it * 1000L - System.currentTimeMillis() }
+        val asked = listOfNotNull(retryAfter, resetAt).maxOrNull() ?: FAILURE_RETRY_MS
+        return asked.coerceIn(FAILURE_RETRY_MS, 30 * 60 * 1000L)
     }
 
     /**
