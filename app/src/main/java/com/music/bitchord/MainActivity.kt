@@ -261,6 +261,7 @@ import com.music.bitchord.ui.components.FrostedTopBar
 import com.music.bitchord.ui.components.LastfmLoginAlert
 import com.music.bitchord.ui.components.LocalAppBackdrop
 import com.music.bitchord.ui.components.LocalLiquidGlassEnabled
+import com.music.bitchord.ui.components.MandatoryUpdateHost
 import com.music.bitchord.ui.components.backdrop.backdrops.LayerBackdrop
 import com.music.bitchord.ui.components.backdrop.backdrops.layerBackdrop
 import com.music.bitchord.ui.components.backdrop.backdrops.rememberLayerBackdrop
@@ -5882,6 +5883,12 @@ private fun BitChordApp(
             )
         }
 
+        // Last in the tree and in a window of its own: a mandatory update
+        // covers every page, sheet and alert, not just the tab underneath it.
+        // The key re-checks the release on every section change.
+        MandatoryUpdateHost(
+            navigationKey = Triple(route, detail?.browseId, selectedTab),
+        )
     }
 }
 

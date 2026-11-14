@@ -98,6 +98,15 @@ android {
         // TV has no addons; AddonAuth only reaches the compiler through the
         // shared phone sources, so it gets no server.
         buildConfigField("String", "ADDON_AUTH_URL", "\"\"")
+
+        // Same release source as the phone app; the TV prefix keeps it from
+        // installing a phone APK. See AppUpdateManager.
+        buildConfigField(
+            "String",
+            "UPDATE_RELEASE_API_URL",
+            "\"https://api.github.com/repos/videshkarmakar-hue/V-Tune-3.O/releases/latest\"",
+        )
+        buildConfigField("String", "UPDATE_APK_PREFIX", "\"V-TuneTV-\"")
     }
 
     splits {

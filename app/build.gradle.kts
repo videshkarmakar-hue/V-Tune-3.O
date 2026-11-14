@@ -97,6 +97,16 @@ android {
             "ADDON_AUTH_URL",
             "\"${addonAuthServer.replace("\\", "\\\\").replace("\"", "\\\"")}\"",
         )
+
+        // Mandatory update enforcement. GitHub's latest release is the source
+        // of truth; the APK prefix tells this app's assets apart from the TV
+        // and watch files that share the same release. See AppUpdateManager.
+        buildConfigField(
+            "String",
+            "UPDATE_RELEASE_API_URL",
+            "\"https://api.github.com/repos/videshkarmakar-hue/V-Tune-3.O/releases/latest\"",
+        )
+        buildConfigField("String", "UPDATE_APK_PREFIX", "\"V-Tune-\"")
     }
 
     splits {

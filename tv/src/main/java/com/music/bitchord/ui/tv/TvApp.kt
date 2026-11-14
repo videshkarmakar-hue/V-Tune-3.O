@@ -40,6 +40,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -62,6 +63,8 @@ import com.music.bitchord.data.model.BrowseType
 import com.music.bitchord.data.settings.TvSettings
 import com.music.bitchord.playback.PlayerState
 import com.music.bitchord.ui.MainViewModel
+import com.music.bitchord.data.AppUpdateManager
+import com.music.bitchord.ui.components.MandatoryUpdateHost
 import com.music.bitchord.ui.tv.components.LocalTvChrome
 import com.music.bitchord.ui.tv.components.TvArtwork
 import com.music.bitchord.ui.tv.components.TvChrome
@@ -241,6 +244,12 @@ fun TvApp(
                 allowPhoneSignIn = false,
             )
         }
+
+        // The same mandatory gate the phone mounts, in its own window over
+        // setup, the shell and every TV dialog.
+        MandatoryUpdateHost(
+            navigationKey = Triple(isRunningSetup, showAccountDialog, isNowPlayingOpen),
+        )
     }
 }
 
@@ -293,6 +302,9 @@ private fun TvMainShell(
     val stateHolder = rememberSaveableStateHolder()
     var destination by remember { mutableStateOf(TvDestination.HOME) }
     val detailStack = remember { mutableStateListOf<TvDetailRoute>() }
+    val context = LocalContext.current
+    // Section changes re-check through the same central manager the phone uses.
+    LaunchedEffect(destination, detailStack.size) { AppUpdateManager.checkIfStale(context) }
     val tabFocus = remember { FocusRequester() }
     var barHasFocus by remember { mutableStateOf(false) }
     // The card each pushed page was opened from, so Back can hand focus back to it.
