@@ -167,6 +167,20 @@ object AppUpdateManager {
                     failureBackoffMs = FAILURE_RETRY_MS
                     return@withContext _pending.value
                 }
+                if (response.code == 404) {
+                    // `/releases/latest` answers 404 while the repository has
+                    // no published release. That is "there is nothing newer to
+                    // install", not a network failure, so it must not read as
+                    // one in Settings or be retried every minute.
+                    lastCheckedAt = SystemClock.elapsedRealtime()
+                    lastCheckFailed = false
+                    failureBackoffMs = FAILURE_RETRY_MS
+                    releaseEtag = null
+                    _pending.value = null
+                    _download.value = DownloadState.Idle
+                    storePending(app, null)
+                    return@withContext null
+                }
                 if (!response.isSuccessful) {
                     lastCheckedAt = SystemClock.elapsedRealtime()
                     lastCheckFailed = true
