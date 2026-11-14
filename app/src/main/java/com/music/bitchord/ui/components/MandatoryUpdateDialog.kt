@@ -147,7 +147,7 @@ private fun MandatoryUpdateCard(
         android.content.res.Configuration.UI_MODE_TYPE_TELEVISION
     val focusRequester = remember { FocusRequester() }
     // A television sits across the room: a wider card and the set's own
-    // near-black alert backdrop, the same one [TvDialog] uses, rather than a
+    // near-black alert backdrop — the one the TV dialogs use — rather than a
     // phone-sized sheet fading the app out.
     val shape = RoundedCornerShape(if (isTelevision) 18.dp else 26.dp)
     val scrim = if (isTelevision) {
