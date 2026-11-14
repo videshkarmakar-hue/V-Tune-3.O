@@ -8,9 +8,13 @@ import android.os.SystemClock
 import android.provider.Settings
 import androidx.core.content.FileProvider
 import com.music.bitchord.BuildConfig
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -99,6 +103,10 @@ object AppUpdateManager {
 
     /** Serialises concurrent checks; see [checkLocked]. */
     private val checkMutex = Mutex()
+
+    /** Owns the download so it outlives whichever screen happens to be composed. */
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var downloadJob: Job? = null
 
     /**
      * Checks the latest release now. Called at every cold start with [force],
@@ -245,8 +253,18 @@ object AppUpdateManager {
      * Streams the pending release's APK into the app cache, reporting progress
      * through [download]. The file is validated against the release's version
      * before it is handed to the installer.
+     *
+     * Runs on the manager's own scope rather than a composable's: the gate is
+     * shown over a dozen different screens, and turning the phone must not
+     * cancel a download that is halfway through.
      */
-    suspend fun downloadApk(context: Context): Unit = withContext(Dispatchers.IO) {
+    fun startDownload(context: Context) {
+        if (downloadJob?.isActive == true) return
+        val app = context.applicationContext
+        downloadJob = scope.launch { downloadApk(app) }
+    }
+
+    private suspend fun downloadApk(context: Context): Unit = withContext(Dispatchers.IO) {
         val info = _pending.value ?: return@withContext
         val url = info.apkUrl ?: return@withContext
         _download.value = DownloadState.Downloading(0f)

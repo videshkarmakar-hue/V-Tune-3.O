@@ -32,7 +32,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,7 +62,6 @@ import com.music.bitchord.R
 import com.music.bitchord.data.AppUpdateManager
 import com.music.bitchord.data.AppUpdateManager.DownloadState
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 /**
  * The mandatory update gate. Mounted once at the activity root — phone and TV
@@ -95,21 +93,38 @@ fun MandatoryUpdateHost(
     // Every navigation asks again, within the manager's cache window.
     LaunchedEffect(navigationKey) { AppUpdateManager.checkIfStale(context) }
 
-    // A release published while the app is already open is still enforced.
+    // A release published while the app is already open is still enforced:
+    // check on each return to the foreground, then every half hour while it
+    // stays there. The manager's TTL keeps a quick app switch off the network.
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             while (true) {
-                delay(AppUpdateManager.FOREGROUND_CHECK_INTERVAL_MS)
                 AppUpdateManager.checkIfStale(context)
+                delay(AppUpdateManager.FOREGROUND_CHECK_INTERVAL_MS)
             }
         }
     }
 
+    // Mandatory means the download is not a second decision: it starts as soon
+    // as the gate appears, so the button installs rather than asks. Keyed on
+    // the release only — keying on the download state would cancel the
+    // download the moment it reported its first progress tick.
+    LaunchedEffect(update?.version, update?.apkUrl) {
+        val info = update ?: return@LaunchedEffect
+        if (info.apkUrl != null && AppUpdateManager.download.value is DownloadState.Idle) {
+            AppUpdateManager.startDownload(context)
+        }
+    }
+
     // Returning from the installer (or from the unknown-sources screen) is the
-    // moment the installed version can be trusted again.
+    // moment the installed version can be trusted again — and, if the flow was
+    // parked on that permission screen, the moment it can be finished.
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) AppUpdateManager.verifyInstalled(context)
+            if (event == Lifecycle.Event.ON_RESUME) {
+                AppUpdateManager.verifyInstalled(context)
+                AppUpdateManager.resumeInstallIfWaiting(context)
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -141,7 +156,6 @@ private fun MandatoryUpdateCard(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val isTelevision = LocalConfiguration.current.uiMode and
         android.content.res.Configuration.UI_MODE_TYPE_MASK ==
         android.content.res.Configuration.UI_MODE_TYPE_TELEVISION
@@ -171,9 +185,9 @@ private fun MandatoryUpdateCard(
     val onPrimary: () -> Unit = when {
         downloading != null -> ({})
         ready != null -> ({ AppUpdateManager.installApk(context, ready.file) })
-        failed != null -> ({ scope.launch { AppUpdateManager.downloadApk(context) } })
+        failed != null -> ({ AppUpdateManager.startDownload(context) })
         update.apkUrl == null -> ({ AppUpdateManager.openReleasePage(context) })
-        else -> ({ scope.launch { AppUpdateManager.downloadApk(context) } })
+        else -> ({ AppUpdateManager.startDownload(context) })
     }
 
     Box(
