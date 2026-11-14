@@ -283,9 +283,11 @@ object AppUpdateManager {
      * cancel a download that is halfway through.
      */
     fun startDownload(context: Context) {
-        if (downloadJob?.isActive == true) return
         val app = context.applicationContext
-        downloadJob = scope.launch { downloadApk(app) }
+        synchronized(this) {
+            if (downloadJob?.isActive == true) return
+            downloadJob = scope.launch { downloadApk(app) }
+        }
     }
 
     private suspend fun downloadApk(context: Context): Unit = withContext(Dispatchers.IO) {
@@ -328,6 +330,14 @@ object AppUpdateManager {
 
             check(isThisAppAtLeast(context, target, info.version)) {
                 "The downloaded file is not V-Tune ${info.version}."
+            }
+            // A newer release may have been published while this one was on the
+            // wire. Installing it would satisfy the wrong gate, so the file is
+            // dropped and the card falls back to Update Now for the new one.
+            if (_pending.value?.version != info.version) {
+                target.delete()
+                _download.value = DownloadState.Idle
+                return@withContext
             }
             _download.value = DownloadState.Ready(target)
         }.onFailure { error ->
