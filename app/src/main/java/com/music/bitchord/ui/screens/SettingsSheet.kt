@@ -84,6 +84,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatDelegate
 import com.music.bitchord.data.lyrics.translationLanguageName
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -147,6 +148,7 @@ import com.music.bitchord.ui.components.thumbnailBorder
 import com.music.bitchord.ui.performance.resolvePerformanceRefreshRate
 import com.music.bitchord.ui.performance.supportedPerformanceRefreshRates
 import com.music.bitchord.data.model.Account
+import com.music.bitchord.data.AppUpdateManager
 import com.music.bitchord.data.LocalMediaRepository
 import com.music.bitchord.data.NerdStats
 import com.music.bitchord.data.scrobbling.LastFM
@@ -406,6 +408,14 @@ fun SettingsScreen(
             context.packageManager.getPackageInfo(context.packageName, 0).versionName
         }.getOrNull() ?: "1.0"
     }
+
+    // The Settings-side of the updater: one check on demand, with its own
+    // in-flight and "what did it say" state. The mandatory gate itself is
+    // mounted at the activity root and reacts to the manager's flow, so a
+    // check that finds a release covers the app on its own.
+    val updateScope = rememberCoroutineScope()
+    var checkingForUpdate by remember { mutableStateOf(false) }
+    var updateCheck by remember { mutableStateOf<AppUpdateManager.ManualCheck?>(null) }
 
     // Made fresh on every pass rather than remembered: it tallies the rows
     // that answered to the query, and that tally has to start from zero each
@@ -1756,6 +1766,56 @@ fun SettingsScreen(
             }
         }
 
+        // Its own section rather than a line under About: this is the one
+        // place the user can ask the same question the app asks itself on
+        // start-up, and the answer is worth reading on its own.
+        if (shows(SettingsCategory.UPDATES)) SearchableSettingsGroup(search, header = stringResource(R.string.updates)) {
+            val checkTitle = stringResource(R.string.check_for_update)
+            row(checkTitle, "version", "release", "github", "upgrade") {
+                val result = updateCheck
+                val subtitle = when {
+                    checkingForUpdate -> stringResource(R.string.checking_for_update)
+                    result is AppUpdateManager.ManualCheck.Available ->
+                        stringResource(R.string.update_available, result.version)
+                    result == AppUpdateManager.ManualCheck.UpToDate ->
+                        stringResource(R.string.update_up_to_date)
+                    result == AppUpdateManager.ManualCheck.Unreachable ->
+                        stringResource(R.string.update_check_failed)
+                    else -> stringResource(R.string.check_for_update_subtitle, version)
+                }
+                SettingsRow(
+                    icon = SfIcons.Upgrade,
+                    title = checkTitle,
+                    subtitle = subtitle,
+                    enabled = !checkingForUpdate,
+                    // The chevron would promise a page; the spinner says the
+                    // row is busy, and it is the only thing the tap does.
+                    trailing = if (checkingForUpdate) {
+                        {
+                            CircularProgressIndicator(
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    } else {
+                        null
+                    },
+                    onClick = {
+                        if (!checkingForUpdate) {
+                            checkingForUpdate = true
+                            updateCheck = null
+                            updateScope.launch {
+                                val outcome = AppUpdateManager.checkForUpdates(context)
+                                updateCheck = outcome
+                                checkingForUpdate = false
+                            }
+                        }
+                    },
+                )
+            }
+        }
+
         // Read after every group above has had its turn at the query, which is
         // what makes this an accurate "nothing here" rather than a guess.
         if (searching && !search.anyMatch) {
@@ -2784,6 +2844,7 @@ enum class SettingsCategory(@param:StringRes val title: Int) {
     YOUR_DATA(R.string.your_data),
     MISCELLANEOUS(R.string.miscellaneous),
     LANGUAGE(R.string.language),
+    UPDATES(R.string.updates),
     ;
 
     val icon: ImageVector
@@ -2798,6 +2859,7 @@ enum class SettingsCategory(@param:StringRes val title: Int) {
             YOUR_DATA -> SfIcons.YourData
             MISCELLANEOUS -> SfIcons.Miscellaneous
             LANGUAGE -> SfIcons.Language
+            UPDATES -> SfIcons.Upgrade
         }
 }
 

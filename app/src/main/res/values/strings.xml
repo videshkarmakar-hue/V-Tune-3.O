@@ -175,6 +175,13 @@
     <string name="install_update">Install Update</string>
     <string name="retry_update">Try Again</string>
     <string name="open_download_page">Open Download Page</string>
+    <!-- Settings → Updates: the on-demand check that sits beside the mandatory gate. -->
+    <string name="updates">Updates</string>
+    <string name="check_for_update">Check for Update</string>
+    <string name="check_for_update_subtitle">Installed version %1$s</string>
+    <string name="checking_for_update">Checking for updates…</string>
+    <string name="update_up_to_date">You’re on the latest version</string>
+    <string name="update_check_failed">Couldn’t check for updates. Try again in a moment.</string>
     <string name="log_copied">Log copied · %1$d lines</string>
     <string name="sign_in_youtube_music">Sign in to YouTube Music</string>
     <string name="choose_a_channel">Choose a channel</string>

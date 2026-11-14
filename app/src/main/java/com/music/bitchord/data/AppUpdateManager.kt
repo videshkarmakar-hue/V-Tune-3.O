@@ -53,6 +53,18 @@ object AppUpdateManager {
         val notes: String?,
     )
 
+    /** What a check started from Settings found. */
+    sealed interface ManualCheck {
+        /** The installed build is the latest published release. */
+        data object UpToDate : ManualCheck
+
+        /** A release is pending, and the gate is already up over the app. */
+        data class Available(val version: String) : ManualCheck
+
+        /** GitHub could not be reached, so the check learned nothing. */
+        data object Unreachable : ManualCheck
+    }
+
     /** Where this update's APK download currently stands. */
     sealed interface DownloadState {
         data object Idle : DownloadState
@@ -95,6 +107,7 @@ object AppUpdateManager {
     val download = _download.asStateFlow()
 
     private var lastCheckedAt = 0L
+    @Volatile
     private var lastCheckFailed = false
     private var releaseEtag: String? = null
 
@@ -209,6 +222,22 @@ object AppUpdateManager {
 
     /** A navigation happened; re-check only if the TTL has run out. */
     suspend fun checkIfStale(context: Context) = check(context, force = false)
+
+    /**
+     * A check the user asked for from Settings.
+     *
+     * It bypasses the cache window so the answer is about right now, and it
+     * reports the outcome instead of leaving it implicit in [pending], which is
+     * null both when the app is current and when the request failed.
+     */
+    suspend fun checkForUpdates(context: Context): ManualCheck {
+        val update = check(context, force = true)
+        return when {
+            update != null -> ManualCheck.Available(update.version)
+            lastCheckFailed -> ManualCheck.Unreachable
+            else -> ManualCheck.UpToDate
+        }
+    }
 
     /**
      * Clears the gate only when the package manager now reports a build that is
@@ -481,7 +510,8 @@ object AppUpdateManager {
         }
     }
 
-    /** A cached APK from an earlier attempt (or a killed process) is still a valid head start. */    private fun adoptCachedApk(context: Context, version: String) {
+    /** A cached APK from an earlier attempt (or a killed process) is still a valid head start. */
+    private fun adoptCachedApk(context: Context, version: String) {
         if (_download.value is DownloadState.Downloading) return
         val file = File(File(context.cacheDir, CACHE_SUBDIR), "vtune-$version.apk")
         if (isThisAppAtLeast(context, file, version)) {
