@@ -247,7 +247,7 @@ object AppUpdateManager {
                 }
             }
 
-            check(apkVersion(context, target) == info.version) {
+            check(isThisAppAtLeast(context, target, info.version)) {
                 "The downloaded file is not V-Tune ${info.version}."
             }
             _download.value = DownloadState.Ready(target)
@@ -314,7 +314,7 @@ object AppUpdateManager {
     private fun adoptCachedApk(context: Context, version: String) {
         if (_download.value is DownloadState.Downloading) return
         val file = File(File(context.cacheDir, CACHE_SUBDIR), "vtune-$version.apk")
-        if (file.isFile && file.length() > 0L && apkVersion(context, file) == version) {
+        if (isThisAppAtLeast(context, file, version)) {
             _download.value = DownloadState.Ready(file)
         } else if (_download.value is DownloadState.Ready) {
             _download.value = DownloadState.Idle
@@ -326,10 +326,25 @@ object AppUpdateManager {
         context.packageManager.getPackageInfo(context.packageName, 0).versionName
     }.getOrNull()
 
+    /**
+     * The file really is this app, and really is the build the release promised.
+     *
+     * The package name is checked first so a mis-named asset can never be handed
+     * to the installer. The version test is "not older than" rather than "equal
+     * to": a release tagged `v1.0.1` whose APK reports `1.0.1` is the same build,
+     * and a build that carries a local suffix should still install instead of
+     * leaving the gate up forever over a string mismatch.
+     */
     @Suppress("DEPRECATION")
-    private fun apkVersion(context: Context, file: File): String? = runCatching {
-        context.packageManager.getPackageArchiveInfo(file.absolutePath, 0)?.versionName
-    }.getOrNull()
+    private fun isThisAppAtLeast(context: Context, file: File, version: String): Boolean {
+        if (!file.isFile || file.length() == 0L) return false
+        val info = runCatching {
+            context.packageManager.getPackageArchiveInfo(file.absolutePath, 0)
+        }.getOrNull() ?: return false
+        if (info.packageName != context.packageName) return false
+        val apkVersion = info.versionName ?: return false
+        return !isNewer(version, apkVersion)
+    }
 
     /** A version split into its numeric dotted parts and whether it carries a "-suffix" (e.g. "-beta2"). */
     private data class ParsedVersion(val parts: List<Int>, val isPreRelease: Boolean)

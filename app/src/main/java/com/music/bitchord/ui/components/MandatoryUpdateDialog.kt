@@ -38,7 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -146,7 +146,16 @@ private fun MandatoryUpdateCard(
         android.content.res.Configuration.UI_MODE_TYPE_MASK ==
         android.content.res.Configuration.UI_MODE_TYPE_TELEVISION
     val focusRequester = remember { FocusRequester() }
-    val shape = RoundedCornerShape(26.dp)
+    // A television sits across the room: a wider card and the set's own
+    // near-black alert backdrop, the same one [TvDialog] uses, rather than a
+    // phone-sized sheet fading the app out.
+    val shape = RoundedCornerShape(if (isTelevision) 18.dp else 26.dp)
+    val scrim = if (isTelevision) {
+        Color(0xF2111113)
+    } else {
+        MaterialTheme.colorScheme.scrim.copy(alpha = 0.62f)
+    }
+    val cardPad = if (isTelevision) 34.dp else 24.dp
 
     BackHandler(enabled = true) { }
 
@@ -170,7 +179,7 @@ private fun MandatoryUpdateCard(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.62f))
+            .background(scrim)
             // The scrim is part of the gate: a tap misses the card and does
             // nothing, rather than falling through to the page underneath.
             .clickable(
@@ -184,34 +193,30 @@ private fun MandatoryUpdateCard(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
-            val cardWidth = minOf(maxWidth * 0.88f, 420.dp)
+            val cardWidth = minOf(maxWidth * 0.88f, if (isTelevision) 560.dp else 420.dp)
             Column(
                 modifier = Modifier
                     .width(cardWidth)
                     .heightIn(max = maxHeight * 0.9f)
                     .clip(shape)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                MaterialTheme.colorScheme.surface,
-                                MaterialTheme.colorScheme.surface,
-                            ),
-                        ),
-                    )
+                    .background(MaterialTheme.colorScheme.surface)
                     .border(
                         0.5.dp,
                         MaterialTheme.colorScheme.outline.copy(alpha = 0.22f),
                         shape,
                     )
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp, vertical = 22.dp),
+                    .padding(horizontal = cardPad, vertical = 22.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Image(
                     painter = painterResource(R.drawable.ic_logo),
                     contentDescription = null,
                     colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
-                    modifier = Modifier.size(width = 54.dp, height = 36.dp),
+                    modifier = Modifier.size(
+                        width = if (isTelevision) 72.dp else 54.dp,
+                        height = if (isTelevision) 48.dp else 36.dp,
+                    ),
                 )
 
                 Spacer(Modifier.height(16.dp))
