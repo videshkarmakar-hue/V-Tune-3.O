@@ -1787,7 +1787,6 @@ fun SettingsScreen(
                     icon = SfIcons.Upgrade,
                     title = checkTitle,
                     subtitle = subtitle,
-                    enabled = !checkingForUpdate,
                     // The chevron would promise a page; the spinner says the
                     // row is busy, and it is the only thing the tap does.
                     trailing = if (checkingForUpdate) {

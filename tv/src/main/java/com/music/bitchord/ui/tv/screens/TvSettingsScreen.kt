@@ -55,7 +55,7 @@ import kotlinx.coroutines.launch
 // Discord Rich Presence is hidden on TV for now; TvDiscordDialog is kept for when it returns.
 private enum class SettingsSheet { Theme, RefreshRate, Equalizer, Scrobbling, LyricsSources, About }
 
-private const val DefaultBlurb = "Playback, sound and display preferences for BitChord on this TV."
+private const val DefaultBlurb = "Playback, sound and display preferences for V-Tune on this TV."
 
 /**
  * Settings, as tvOS lays it out: the app on the left with a plain description of
