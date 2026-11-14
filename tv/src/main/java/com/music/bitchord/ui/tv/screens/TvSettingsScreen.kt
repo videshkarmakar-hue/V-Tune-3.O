@@ -21,12 +21,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.music.bitchord.BuildConfig
+import com.music.bitchord.data.AppUpdateManager
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.TvSettings
 import com.music.bitchord.ui.MainViewModel
@@ -47,6 +50,7 @@ import com.music.bitchord.ui.tv.personalization.AppThemeOption
 import com.music.bitchord.ui.tv.theme.TvDimensions
 import com.music.bitchord.ui.tv.theme.TvGlass
 import com.music.bitchord.ui.tv.theme.TvType
+import kotlinx.coroutines.launch
 
 // Discord Rich Presence is hidden on TV for now; TvDiscordDialog is kept for when it returns.
 private enum class SettingsSheet { Theme, RefreshRate, Equalizer, Scrobbling, LyricsSources, About }
@@ -91,6 +95,13 @@ fun TvSettingsScreen(
 
     var blurb by remember { mutableStateOf(DefaultBlurb) }
     var sheet by remember { mutableStateOf<SettingsSheet?>(null) }
+
+    // The same on-demand check the phone's Settings offers; a release it finds
+    // is enforced by the gate mounted at the TV app's root.
+    val context = LocalContext.current
+    val updateScope = rememberCoroutineScope()
+    var checkingForUpdate by remember { mutableStateOf(false) }
+    var updateCheck by remember { mutableStateOf<AppUpdateManager.ManualCheck?>(null) }
 
     Row(
         modifier = modifier
@@ -335,6 +346,33 @@ fun TvSettingsScreen(
                     onClick = onRunSetupAgain,
                 )
             }
+
+            item { TvListHeader("Updates") }
+            item {
+                TvListRow(
+                    title = "Check for Update",
+                    value = when {
+                        checkingForUpdate -> "Checking…"
+                        updateCheck is AppUpdateManager.ManualCheck.UpToDate -> "Up to date"
+                        updateCheck is AppUpdateManager.ManualCheck.Unreachable -> "Check failed"
+                        else -> BuildConfig.VERSION_NAME
+                    },
+                    onFocused = { blurb = "Ask GitHub whether a newer version of V-Tune has been released." },
+                    enabled = !checkingForUpdate,
+                    onClick = {
+                        if (!checkingForUpdate) {
+                            checkingForUpdate = true
+                            updateCheck = null
+                            updateScope.launch {
+                                val outcome = AppUpdateManager.checkForUpdates(context)
+                                updateCheck = outcome
+                                checkingForUpdate = false
+                            }
+                        }
+                    },
+                )
+            }
+
             item {
                 TvListRow(
                     title = "About",
