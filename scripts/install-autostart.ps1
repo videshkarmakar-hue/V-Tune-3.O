@@ -1,10 +1,15 @@
 [CmdletBinding()]
 param(
-    [string]$RepoPath = (Split-Path -Parent $PSScriptRoot)
+    [string]$RepoPath
 )
 $ErrorActionPreference = 'Stop'
 
-$ps1 = Join-Path $PSScriptRoot 'auto-push.ps1'
+$self = $MyInvocation.MyCommand.Path
+if (-not $self) { $self = $PSCommandPath }
+$scriptDir = Split-Path -Parent $self
+if (-not $RepoPath) { $RepoPath = Split-Path -Parent $scriptDir }
+
+$ps1 = Join-Path $scriptDir 'auto-push.ps1'
 if (-not (Test-Path -LiteralPath $ps1)) { throw "Missing $ps1" }
 
 $startup = [Environment]::GetFolderPath('Startup')

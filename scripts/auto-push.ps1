@@ -21,7 +21,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$RepoPath = (Split-Path -Parent $PSScriptRoot),
+    [string]$RepoPath,
     [string]$Remote = 'origin',
     [string]$Branch = 'main',
     [int]$IntervalSeconds = 15,
@@ -31,6 +31,13 @@ param(
 )
 
 $ErrorActionPreference = 'Continue'
+
+# Resolve the repo root without relying on $PSScriptRoot during parameter binding.
+if (-not $RepoPath) {
+    $self = $MyInvocation.MyCommand.Path
+    if (-not $self) { $self = $PSCommandPath }
+    $RepoPath = Split-Path -Parent (Split-Path -Parent $self)
+}
 
 # Keep git from waiting for input in a background window.
 $env:GIT_TERMINAL_PROMPT = '0'
