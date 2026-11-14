@@ -1,0 +1,159 @@
+name: Release Automation
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish tag and GitHub Release (requires explicit approval intent). If false, runs prepare/validation only."
+        required: true
+        default: "false"
+        type: choice
+        options: ["false", "true"]
+      target:
+        description: "Target branch/commit for the release"
+        required: true
+        default: "main"
+        type: string
+      build:
+        description: "Build signed prod release APKs before preparing release"
+        required: true
+        default: "true"
+        type: choice
+        options: ["true", "false"]
+      modules:
+        description: "Comma-separated modules to include (app,tv,wearos)"
+        required: true
+        default: "app,tv,wearos"
+        type: string
+      draft:
+        description: "Create as draft release when publishing"
+        required: true
+        default: "false"
+        type: choice
+        options: ["false", "true"]
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare-release:
+    name: Build, Prepare, Validate (and Publish if requested)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Set up JDK 17
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build == 'true' }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+          cache: gradle
+
+      - name: Setup signing and local properties
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build == 'true' }}
+        env:
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+          LISTEN_TOGETHER_SERVER: ${{ secrets.LISTEN_TOGETHER_SERVER }}
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          : > local.properties
+          [ -n "${LASTFM_API_KEY:-}" ] && echo "LASTFM_API_KEY=$LASTFM_API_KEY" >> local.properties || true
+          [ -n "${LASTFM_SECRET:-}" ] && echo "LASTFM_SECRET=$LASTFM_SECRET" >> local.properties || true
+          [ -n "${LISTEN_TOGETHER_SERVER:-}" ] && echo "LISTEN_TOGETHER_SERVER=$LISTEN_TOGETHER_SERVER" >> local.properties || true
+
+          if [ -z "${KEYSTORE_BASE64:-}" ] || [ -z "${KEYSTORE_PASSWORD:-}" ] || [ -z "${KEY_ALIAS:-}" ] || [ -z "${KEY_PASSWORD:-}" ]; then
+            echo "Release signing secrets are required to build publishable APKs." >&2
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > bitchord-release.jks
+          {
+            echo "storeFile=bitchord-release.jks"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > keystore.properties
+
+      - name: Grant execute permission for gradlew
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build == 'true' }}
+        run: chmod +x gradlew
+
+      - name: Build signed prod release APKs
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build == 'true' }}
+        run: ./gradlew :app:assembleProdRelease :tv:assembleProdRelease :wearos:assembleProdRelease --stacktrace
+
+      - name: Prepare and validate release assets
+        id: prepare
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist/release
+          python3 scripts/release_agent.py \
+            --modules "${{ github.event_name == 'workflow_dispatch' && inputs.modules || 'app,tv,wearos' }}" \
+            --base-ref "${{ github.event_name == 'push' && github.event.before || 'origin/main' }}" \
+            --dist-dir dist/release \
+            --json-report dist/release/release-report.json \
+            --notes-file dist/release/RELEASE_NOTES.md \
+            --prepare-only
+
+      - name: Upload prepared release bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-bundle
+          path: dist/release/
+
+      - name: Publish GitHub Release (manual explicit approval intent)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Re-run agent in publish mode using prepared assets in dist/release.
+          python3 scripts/release_agent.py \
+            --modules "${{ inputs.modules }}" \
+            --search-dir dist/release \
+            --dist-dir dist/release-publish \
+            --notes-file dist/release/RELEASE_NOTES.md \
+            --target "${{ inputs.target }}" \
+            ${{ inputs.draft == 'true' && '--draft' || '' }} \
+            --publish \
+            --json-report dist/release-publish/release-report.json
+
+      - name: Validate existing tag release (tag push trigger)
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Release exists for $TAG_NAME; validating assets..."
+            gh release view "$TAG_NAME" --json tagName,name,assets,url,isDraft,isPrerelease
+          else
+            echo "Tag $TAG_NAME pushed but no GitHub Release found."
+            echo "Create/publish the release via workflow_dispatch (publish=true) after assets are prepared, or publish from a trusted environment."
+            exit 1
+          fi
