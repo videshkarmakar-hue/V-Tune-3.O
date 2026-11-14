@@ -73,8 +73,8 @@ V-Tune 3.O is an evolving project. More improvements, refinements, and updates m
 
 ---
 
-\<p align="center">
-&#x20; \<b>V-Tune 3.O\</b>\<br>
-&#x20; Music Without Limits.\<br>\<br>
-&#x20; Crafted with ❤️ by Videsh Karmakar.
-\</p>
+<p align="center">
+  <b>V-Tune 3.O</b><br>
+  Music Without Limits.<br><br>
+  Crafted with ❤️ by Videsh Karmakar.
+</p>
