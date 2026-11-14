@@ -50,3 +50,6 @@ AGENTS.md
 
 # Claude Code session files (launch configs, worktrees)
 .claude/
+
+# V-Tune 3.O auto-push agent runtime state (pid/lock/log)
+.auto-push/
