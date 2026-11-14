@@ -14,9 +14,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import okhttp3.Request
 import java.io.File
 
@@ -64,6 +66,18 @@ object AppUpdateManager {
 
     private const val CACHE_SUBDIR = "updates"
 
+    /** The release that gated the last session, so force-stopping the app is not an escape hatch. */
+    private const val UPDATE_PREFS = "vtune_update"
+    private const val KEY_PENDING_RELEASE = "pending_release"
+    private const val KEY_PENDING_AT = "pending_at"
+
+    /**
+     * A gate restored from disk is only honoured while it is still plausible —
+     * a release from weeks ago that can no longer be confirmed is more likely
+     * a deleted tag than a build worth locking the app for.
+     */
+    private const val MAX_PERSISTED_AGE_MS = 14L * 24 * 60 * 60 * 1000
+
     private val json = Json { ignoreUnknownKeys = true }
 
     private val _pending = MutableStateFlow<UpdateInfo?>(null)
@@ -90,6 +104,9 @@ object AppUpdateManager {
     suspend fun check(context: Context, force: Boolean = false): UpdateInfo? = withContext(Dispatchers.IO) {
         val app = context.applicationContext
         verifyInstalled(app)
+        // Killed and relaunched offline, the app is still gated: the last
+        // confirmed release is restored before the network is even tried.
+        if (_pending.value == null) restorePending(app)
 
         val now = SystemClock.elapsedRealtime()
         val ttl = if (lastCheckFailed) FAILURE_RETRY_MS else CHECK_TTL_MS
@@ -132,18 +149,21 @@ object AppUpdateManager {
                 if (isNewer(latest, installed)) {
                     val current = _pending.value
                     if (current?.version != latest) _download.value = DownloadState.Idle
-                    _pending.value = UpdateInfo(
+                    val info = UpdateInfo(
                         version = latest,
                         releaseUrl = url,
                         apkUrl = apkAssetUrl(release),
                         notes = release["body"]?.jsonPrimitive?.contentOrNull,
                     )
+                    _pending.value = info
+                    storePending(app, info)
                     adoptCachedApk(app, latest)
                 } else {
                     // The installed package has caught up. The gate only ever
                     // closes on this comparison, never on a button press.
                     _pending.value = null
                     _download.value = DownloadState.Idle
+                    storePending(app, null)
                 }
                 _pending.value
             }
@@ -170,6 +190,7 @@ object AppUpdateManager {
         if (isNewer(update.version, installed)) return false
         _pending.value = null
         _download.value = DownloadState.Idle
+        storePending(context, null)
         return true
     }
 
@@ -310,8 +331,61 @@ object AppUpdateManager {
         }
     }
 
-    /** A cached APK from an earlier attempt (or a killed process) is still a valid head start. */
-    private fun adoptCachedApk(context: Context, version: String) {
+    /**
+     * Remembers (or forgets) the release that is gating this install, so the
+     * gate survives the process being killed. A user who force-stops the app to
+     * get past the popup comes back to it.
+     */
+    private fun storePending(context: Context, info: UpdateInfo?) {
+        runCatching {
+            val prefs = context.getSharedPreferences(UPDATE_PREFS, Context.MODE_PRIVATE)
+            if (info == null) {
+                prefs.edit().remove(KEY_PENDING_RELEASE).remove(KEY_PENDING_AT).apply()
+                return
+            }
+            val stored = buildJsonObject {
+                put("version", info.version)
+                put("releaseUrl", info.releaseUrl)
+                info.apkUrl?.let { put("apkUrl", it) }
+                info.notes?.let { put("notes", it) }
+            }.toString()
+            prefs.edit()
+                .putString(KEY_PENDING_RELEASE, stored)
+                .putLong(KEY_PENDING_AT, System.currentTimeMillis())
+                .apply()
+        }
+    }
+
+    /** Re-establishes the gate from the last confirmed release, still subject to the installed version. */
+    private fun restorePending(context: Context) {
+        runCatching {
+            val prefs = context.getSharedPreferences(UPDATE_PREFS, Context.MODE_PRIVATE)
+            val stored = prefs.getString(KEY_PENDING_RELEASE, null) ?: return
+            val storedAt = prefs.getLong(KEY_PENDING_AT, 0L)
+            if (System.currentTimeMillis() - storedAt > MAX_PERSISTED_AGE_MS) {
+                prefs.edit().remove(KEY_PENDING_RELEASE).remove(KEY_PENDING_AT).apply()
+                return
+            }
+            val release = json.parseToJsonElement(stored) as? JsonObject ?: return
+            val version = release["version"]?.jsonPrimitive?.contentOrNull ?: return
+            val url = release["releaseUrl"]?.jsonPrimitive?.contentOrNull ?: return
+            val installed = installedVersionName(context) ?: BuildConfig.VERSION_NAME
+            if (!isNewer(version, installed)) {
+                prefs.edit().remove(KEY_PENDING_RELEASE).remove(KEY_PENDING_AT).apply()
+                return
+            }
+            val info = UpdateInfo(
+                version = version,
+                releaseUrl = url,
+                apkUrl = release["apkUrl"]?.jsonPrimitive?.contentOrNull,
+                notes = release["notes"]?.jsonPrimitive?.contentOrNull,
+            )
+            _pending.value = info
+            adoptCachedApk(context, version)
+        }
+    }
+
+    /** A cached APK from an earlier attempt (or a killed process) is still a valid head start. */    private fun adoptCachedApk(context: Context, version: String) {
         if (_download.value is DownloadState.Downloading) return
         val file = File(File(context.cacheDir, CACHE_SUBDIR), "vtune-$version.apk")
         if (isThisAppAtLeast(context, file, version)) {
