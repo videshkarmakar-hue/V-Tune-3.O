@@ -11,6 +11,8 @@ import com.music.bitchord.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -92,6 +94,12 @@ object AppUpdateManager {
     private var lastCheckFailed = false
     private var releaseEtag: String? = null
 
+    /** Set only while the user is away on the "install unknown apps" screen. */
+    private var awaitingInstallPermission = false
+
+    /** Serialises concurrent checks; see [checkLocked]. */
+    private val checkMutex = Mutex()
+
     /**
      * Checks the latest release now. Called at every cold start with [force],
      * and after each navigation without it, where the TTL keeps a fast tab
@@ -101,7 +109,15 @@ object AppUpdateManager {
      * package manager entry that is no longer older than the release clears the
      * gate before any network work is attempted.
      */
-    suspend fun check(context: Context, force: Boolean = false): UpdateInfo? = withContext(Dispatchers.IO) {
+    suspend fun check(context: Context, force: Boolean = false): UpdateInfo? =
+        checkMutex.withLock { checkLocked(context, force) }
+
+    /**
+     * Cold start, the resume loop and a navigation can all ask at once. The
+     * lock means one request, and the TTL check under it means the later
+     * callers read that result instead of repeating the work.
+     */
+    private suspend fun checkLocked(context: Context, force: Boolean): UpdateInfo? = withContext(Dispatchers.IO) {
         val app = context.applicationContext
         verifyInstalled(app)
         // Killed and relaunched offline, the app is still gated: the last
@@ -287,6 +303,7 @@ object AppUpdateManager {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
             !context.packageManager.canRequestPackageInstalls()
         ) {
+            awaitingInstallPermission = true
             val opened = runCatching {
                 context.startActivity(
                     Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
@@ -298,6 +315,7 @@ object AppUpdateManager {
             // out of the gate: returning re-verifies and leaves the card up.
             if (opened) return true
         }
+        awaitingInstallPermission = false
 
         return runCatching {
             val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
@@ -318,6 +336,28 @@ object AppUpdateManager {
             )
             false
         }
+    }
+
+    /**
+     * Picks the install back up after the "install unknown apps" screen.
+     *
+     * The permission step is the only part of the flow Android insists a human
+     * perform; once it is granted there is no reason to make them find the
+     * button again, so returning to the app hands the APK straight to the
+     * installer. It runs nothing unless [installApk] actually detoured there,
+     * so coming back from the installer itself cannot loop.
+     */
+    fun resumeInstallIfWaiting(context: Context) {
+        if (!awaitingInstallPermission) return
+        awaitingInstallPermission = false
+        val ready = _download.value as? DownloadState.Ready ?: return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            !context.packageManager.canRequestPackageInstalls()
+        ) {
+            // Still refused: leave the card up and let the button explain again.
+            return
+        }
+        installApk(context, ready.file)
     }
 
     /** Opens the release page when the release carries no installable APK. */
@@ -423,10 +463,23 @@ object AppUpdateManager {
     /** A version split into its numeric dotted parts and whether it carries a "-suffix" (e.g. "-beta2"). */
     private data class ParsedVersion(val parts: List<Int>, val isPreRelease: Boolean)
 
+    /**
+     * Reads `1.10.2`, `v1.10.2`, `1.10.2+27` and `1.10.2-beta3` alike.
+     *
+     * Build metadata after a `+` never affects precedence, so a versionName that
+     * carries one still compares equal to the release tag it was built from —
+     * otherwise `1.0.1+27` would rank below `1.0.1` and gate a build that is
+     * already current. A segment that isn't purely numeric is read up to its
+     * first non-digit rather than discarded, and a `-suffix` marks a pre-release.
+     */
     private fun parseVersion(raw: String): ParsedVersion {
-        val dash = raw.indexOf('-')
-        val base = if (dash >= 0) raw.substring(0, dash) else raw
-        return ParsedVersion(base.split(".").map { it.toIntOrNull() ?: 0 }, dash >= 0)
+        val withoutBuild = raw.substringBefore('+')
+        val dash = withoutBuild.indexOf('-')
+        val base = if (dash >= 0) withoutBuild.substring(0, dash) else withoutBuild
+        val parts = base.split(".").map { segment ->
+            segment.takeWhile { it.isDigit() }.toIntOrNull() ?: 0
+        }
+        return ParsedVersion(parts, dash >= 0)
     }
 
     /**
