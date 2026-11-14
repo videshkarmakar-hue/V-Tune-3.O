@@ -37,7 +37,4 @@
     <string name="hdmi">HDMI</string>
     <string name="other_output">Other output</string>
     <string name="moving_to_watch">Moving to watch…</string>
-    <string name="update_channel">Updates</string>
-    <string name="update_ready">V-Tune 3.O update ready</string>
-    <string name="update_tap">Tap to install the update from your phone.</string>
 </resources>

@@ -3030,7 +3030,6 @@ private fun BitChordApp(
                                 onSignOut = { viewModel.signOut() },
                                 onOpenListenBrainzLogin = { showListenBrainzLogin = true },
                                 onOpenLastfmLogin = { showLastfmLogin = true },
-                                onOpenDiscord = { navigator.push(AppRoute.Discord) },
                                 onOpenSpotify = { navigator.push(AppRoute.Spotify) },
                                 contentPadding = listPadding,
                             )

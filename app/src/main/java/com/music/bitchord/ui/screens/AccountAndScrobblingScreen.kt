@@ -45,7 +45,6 @@ fun AccountAndScrobblingScreen(
     onSignOut: () -> Unit,
     onOpenListenBrainzLogin: () -> Unit,
     onOpenLastfmLogin: () -> Unit,
-    onOpenDiscord: () -> Unit,
     onOpenSpotify: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
@@ -62,9 +61,6 @@ fun AccountAndScrobblingScreen(
     val listenBrainzEnabled by AppSettings.listenBrainzEnabled.collectAsStateWithLifecycle()
     val listenBrainzToken by AppSettings.listenBrainzToken.collectAsStateWithLifecycle()
     val listenBrainzPrimaryArtistOnly by AppSettings.listenBrainzPrimaryArtistOnly.collectAsStateWithLifecycle()
-    val discordToken by AppSettings.discordToken.collectAsStateWithLifecycle()
-    val discordUsername by AppSettings.discordUsername.collectAsStateWithLifecycle()
-    val discordRpcEnabled by AppSettings.discordRpcEnabled.collectAsStateWithLifecycle()
     val spotifyConnected by AppSettings.spotifySpdcToken.collectAsStateWithLifecycle()
 
     Column(

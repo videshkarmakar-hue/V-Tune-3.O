@@ -10,9 +10,6 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- The watch as the speaker: WatchPlaybackService plays on with the screen off. -->
-    <!-- Updates sent from the phone's "BitChord for Wear OS" settings (SelfUpdate). -->
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
@@ -47,21 +44,6 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!--
-              Opened by the phone once it has sent an update, so the installer's
-              prompt is on screen rather than waiting in a notification the
-              watch may not alert for. The host is this build's own package, so
-              the dev and prod apps never open each other's.
-            -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:host="${applicationId}"
-                    android:path="/update"
-                    android:scheme="bitchord-wear" />
-            </intent-filter>
         </activity>
 
         <!--
@@ -87,26 +69,7 @@
                     android:pathPrefix="/bitchord/speaker"
                     android:scheme="wear" />
             </intent-filter>
-            <!-- The phone's settings asking what is installed, and sending an update. -->
-            <intent-filter>
-                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
-                <data
-                    android:host="*"
-                    android:pathPrefix="/bitchord/watch"
-                    android:scheme="wear" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="com.google.android.gms.wearable.CHANNEL_EVENT" />
-                <data
-                    android:host="*"
-                    android:pathPrefix="/bitchord/watch/apk"
-                    android:scheme="wear" />
-            </intent-filter>
         </service>
-
-        <receiver
-            android:name=".data.InstallResultReceiver"
-            android:exported="false" />
 
         <service
             android:name=".playback.WatchPlaybackService"

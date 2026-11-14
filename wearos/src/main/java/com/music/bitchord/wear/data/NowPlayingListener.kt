@@ -12,7 +12,6 @@ import androidx.wear.ongoing.Status
 import com.google.android.gms.wearable.DataEvent
 import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.DataMapItem
-import com.google.android.gms.wearable.ChannelClient
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.WearableListenerService
 import com.music.bitchord.wear.playback.Speaker
@@ -37,19 +36,8 @@ class NowPlayingListener : WearableListenerService() {
     override fun onMessageReceived(event: MessageEvent) {
         val path = event.path ?: return
         when {
-            path == P.PATH_WATCH_INFO_REQUEST -> SelfUpdate.publishInfo(this)
             path.startsWith(P.PATH_SPEAKER + "/") -> Speaker.handle(this, path.substringAfterLast('/'), event.data)
         }
-    }
-
-    /** A newer build of this app, sent by the phone's "BitChord for Wear OS" settings. */
-    override fun onChannelOpened(channel: ChannelClient.Channel) {
-        if (channel.path == P.PATH_APK) SelfUpdate.receive(this, channel)
-    }
-
-    /** Play services has finished writing what [SelfUpdate.receive] asked it for. */
-    override fun onInputClosed(channel: ChannelClient.Channel, closeReason: Int, appSpecificErrorCode: Int) {
-        if (channel.path == P.PATH_APK) SelfUpdate.onReceived(this, channel, closeReason)
     }
 
     override fun onDataChanged(events: DataEventBuffer) {

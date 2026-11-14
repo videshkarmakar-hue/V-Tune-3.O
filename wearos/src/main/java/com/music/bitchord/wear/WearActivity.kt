@@ -3,14 +3,7 @@ package com.music.bitchord.wear
 import android.Manifest
 import android.app.Application
 import android.content.pm.PackageManager
-import android.content.Intent
 import android.os.Bundle
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
-import com.music.bitchord.wear.data.SelfUpdate
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.launch
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -18,13 +11,14 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.viewModelScope
 import androidx.wear.ambient.AmbientLifecycleObserver
-import com.music.bitchord.wear.ui.Ambient
-import com.music.bitchord.wear.ui.LocalAmbient
 import com.music.bitchord.wear.data.PhoneLink
+import com.music.bitchord.wear.ui.Ambient
 import com.music.bitchord.wear.ui.BitChordWearTheme
+import com.music.bitchord.wear.ui.LocalAmbient
 import com.music.bitchord.wear.ui.WearApp
 
 class WearViewModel(app: Application) : AndroidViewModel(app) {
@@ -84,16 +78,6 @@ class WearActivity : ComponentActivity() {
                 override fun onStop(owner: LifecycleOwner) = model.link.stop()
             },
         )
-        lifecycleScope.launch {
-            // Whenever the app is on screen, an install waiting on the wearer's
-            // yes is shown — opened by the phone after an update, or by hand.
-            repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                SelfUpdate.pendingConfirm.filterNotNull().collect { confirm ->
-                    SelfUpdate.pendingConfirm.value = null
-                    runCatching { startActivity(confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-                }
-            }
-        }
         setContent {
             BitChordWearTheme {
                 CompositionLocalProvider(LocalAmbient provides ambient.value) {

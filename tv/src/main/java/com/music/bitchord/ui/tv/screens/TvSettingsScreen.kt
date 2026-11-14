@@ -27,7 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.music.bitchord.BuildConfig
-import com.music.bitchord.data.AppUpdateChecker
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.TvSettings
 import com.music.bitchord.ui.MainViewModel
@@ -43,7 +42,6 @@ import com.music.bitchord.ui.tv.dialogs.TvRefreshRateDialog
 import com.music.bitchord.ui.tv.dialogs.TvScrobbleDialog
 import com.music.bitchord.data.settings.TvPlayerStyle
 import com.music.bitchord.ui.tv.dialogs.TvThemeDialog
-import com.music.bitchord.ui.tv.dialogs.TvUpdateDialog
 import com.music.bitchord.ui.tv.display.TvRefreshRateController
 import com.music.bitchord.ui.tv.personalization.AppThemeOption
 import com.music.bitchord.ui.tv.theme.TvDimensions
@@ -51,7 +49,7 @@ import com.music.bitchord.ui.tv.theme.TvGlass
 import com.music.bitchord.ui.tv.theme.TvType
 
 // Discord Rich Presence is hidden on TV for now; TvDiscordDialog is kept for when it returns.
-private enum class SettingsSheet { Theme, RefreshRate, Equalizer, Scrobbling, LyricsSources, Update, About }
+private enum class SettingsSheet { Theme, RefreshRate, Equalizer, Scrobbling, LyricsSources, About }
 
 private const val DefaultBlurb = "Playback, sound and display preferences for BitChord on this TV."
 
@@ -93,7 +91,6 @@ fun TvSettingsScreen(
 
     var blurb by remember { mutableStateOf(DefaultBlurb) }
     var sheet by remember { mutableStateOf<SettingsSheet?>(null) }
-    val update by AppUpdateChecker.available.collectAsState()
 
     Row(
         modifier = modifier
@@ -331,16 +328,6 @@ fun TvSettingsScreen(
             }
 
             item { TvListHeader("General") }
-            if (update != null) {
-                item {
-                    TvListRow(
-                        title = "Software Update",
-                        value = "${update?.version.orEmpty()} Available",
-                        onFocused = { blurb = "Download and install the new version of BitChord for TV." },
-                        onClick = { sheet = SettingsSheet.Update },
-                    )
-                }
-            }
             item {
                 TvListRow(
                     title = "Set Up Again",
@@ -365,7 +352,6 @@ fun TvSettingsScreen(
         SettingsSheet.Equalizer -> TvEqualizerDialog(onDismiss = { sheet = null })
         SettingsSheet.Scrobbling -> TvScrobbleDialog(onDismiss = { sheet = null })
         SettingsSheet.LyricsSources -> TvLyricsSourcesDialog(onDismiss = { sheet = null })
-        SettingsSheet.Update -> update?.let { TvUpdateDialog(update = it, onDismiss = { sheet = null }) }
         SettingsSheet.About -> TvAboutDialog(onDismiss = { sheet = null })
         null -> Unit
     }

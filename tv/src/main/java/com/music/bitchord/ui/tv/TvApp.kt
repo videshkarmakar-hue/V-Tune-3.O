@@ -71,7 +71,6 @@ import com.music.bitchord.ui.tv.components.rememberDominantCardColor
 import com.music.bitchord.ui.tv.components.tvClick
 import com.music.bitchord.ui.tv.components.tvLift
 import com.music.bitchord.ui.tv.dialogs.TvAccountDialog
-import com.music.bitchord.ui.tv.dialogs.TvUpdateDialog
 import com.music.bitchord.ui.tv.player.TvNowPlayingScreen
 import com.music.bitchord.ui.tv.screens.TvDetailScreen
 import com.music.bitchord.ui.tv.screens.TvExploreScreen
@@ -168,11 +167,6 @@ fun TvApp(
         }
     }
 
-    // Offered once per launch, and not over first-time setup. Settings'
-    // "Software Update" row reopens it after it is dismissed.
-    val update by viewModel.updateAvailable.collectAsState()
-    var updateDismissed by remember { mutableStateOf(false) }
-
     val spatialAudio by TvSettings.spatialAudioEnabled.collectAsState()
     LaunchedEffect(spatialAudio) {
         com.music.bitchord.ui.tv.audio.TvSpatialAudioEngine.setEnabled(spatialAudio)
@@ -246,11 +240,6 @@ fun TvApp(
                 },
                 allowPhoneSignIn = false,
             )
-        }
-
-        val pendingUpdate = update
-        if (pendingUpdate != null && !updateDismissed && !isRunningSetup && !showAccountDialog) {
-            TvUpdateDialog(update = pendingUpdate, onDismiss = { updateDismissed = true })
         }
     }
 }
