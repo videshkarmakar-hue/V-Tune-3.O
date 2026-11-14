@@ -51,8 +51,8 @@ import com.music.bitchord.wear.WearProtocol as P
  * with it and is always the matching version.
  *
  *  - **Updates** go over the Wearable channel to the watch app already there,
- *    which hands them to its own package installer — see the watch's
- *    SelfUpdate. Play services carries the bytes, not this process.
+ *    which hands them to its own package installer. Play services carries the
+ *    bytes, not this process.
  *  - **The first install** has nothing on the watch to receive it, and outside
  *    the Play Store only ADB can install there. So this phone *is* the ADB
  *    client — libadb-android, over the watch's Wireless debugging on the same
