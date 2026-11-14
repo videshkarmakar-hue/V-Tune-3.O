@@ -156,6 +156,14 @@ def find_apks(search_dirs: List[Path], modules: List[str]) -> List[Path]:
 
 
 def detect_module(path: Path) -> str:
+    name = path.name
+    # Prepared/normalized asset names
+    if re.search(rf"^{re.escape(APK_PREFIX)}WearOS-", name):
+        return "wearos"
+    if re.search(rf"^{re.escape(APK_PREFIX)}TV-", name):
+        return "tv"
+    if name.startswith(APK_PREFIX):
+        return "app"
     parts = [p.lower() for p in path.parts]
     for m in ("app", "tv", "wearos", "wear"):
         if m in parts:
