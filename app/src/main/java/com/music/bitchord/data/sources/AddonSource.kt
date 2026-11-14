@@ -176,7 +176,7 @@ class AddonSource(
                 // fails, and the reason is only in the log. One that doesn't ask
                 // is out of date, which the row flags on its own line, but works.
                 if (manifest.requiresBitChordAuth) client.checkAuth().exceptionOrNull()?.let { failure ->
-                    val reason = failure.message ?: "BitChord couldn't verify this device"
+                    val reason = failure.message ?: "V-Tune 3.O couldn't verify this device"
                     return@fold if (failure is AddonUnavailable) {
                         SourceHealth.Unreachable(reason)
                     } else {

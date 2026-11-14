@@ -145,7 +145,7 @@ object AddonAuth {
                 drop(current)
             }
         }
-        throw AddonException("BitChord couldn't use this device's secure key store")
+        throw AddonException("V-Tune 3.O couldn't use this device's secure key store")
     }
 
     /**
@@ -316,7 +316,7 @@ object AddonAuth {
                     // Fixable by updating rather than waiting: check again soon after.
                     val backoff = if (error?.error == "outdated_app") TRANSIENT_BACKOFF_MS else REFUSED_BACKOFF_MS
                     throw AttestRefused(
-                        "BitChord couldn't verify this device: " + (error?.message?.ifBlank { null } ?: "HTTP ${response.code}"),
+                        "V-Tune 3.O couldn't verify this device: " + (error?.message?.ifBlank { null } ?: "HTTP ${response.code}"),
                         backoff,
                     )
                 }
