@@ -166,6 +166,7 @@
     <string name="remind_me_later">Remind Me Later</string>
     <string name="try_again">Try Again</string>
     <string name="open_releases_page">Open Releases Page</string>
+    <string name="download_update">Download Update</string>
     <string name="whats_new">What’s new</string>
     <string name="update_required_title">Update required</string>
     <string name="update_required_body">V-Tune 3.O %1$s is required to keep using the app. Install it to continue.</string>

@@ -43,6 +43,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,6 +64,7 @@ import com.music.bitchord.BuildConfig
 import com.music.bitchord.R
 import com.music.bitchord.data.AppUpdateManager
 import com.music.bitchord.data.settings.AppSettings
+import kotlinx.coroutines.launch
 import java.util.Date
 
 @Composable
@@ -73,7 +75,8 @@ fun SoftwareUpdateScreen(
     showBack: Boolean = onBack != null,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
+        val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val pending by AppUpdateManager.pending.collectAsState()
     val download by AppUpdateManager.download.collectAsState()
     val autoWifi by AppUpdateManager.autoUpdateWifi.collectAsState()
@@ -81,7 +84,6 @@ fun SoftwareUpdateScreen(
     val frequency by AppUpdateManager.checkFrequency.collectAsState()
     val lastChecked by AppUpdateManager.lastCheckedWallMs.collectAsState()
     val backgroundChecks by AppSettings.backgroundReleaseChecks.collectAsStateWithLifecycle()
-
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { /* best effort: checks run regardless; notifications post when granted */ }
@@ -130,8 +132,18 @@ fun SoftwareUpdateScreen(
                         is AppUpdateManager.DownloadState.Downloading -> Unit
                         is AppUpdateManager.DownloadState.Failed -> AppUpdateManager.startDownload(context)
                         else -> {
-                            if (info.apkUrl != null) AppUpdateManager.startDownload(context)
-                            else AppUpdateManager.openReleasePage(context)
+                            if (info.apkUrl != null) {
+                                AppUpdateManager.startDownload(context)
+                            } else {
+                                scope.launch {
+                                    val refreshed = AppUpdateManager.check(context, force = true)
+                                    if (refreshed?.apkUrl != null) {
+                                        AppUpdateManager.startDownload(context)
+                                    } else {
+                                        AppUpdateManager.openReleasePage(context)
+                                    }
+                                }
+                            }
                         }
                     }
                 },
@@ -305,8 +317,7 @@ private fun UpdateStatusCard(
         downloading != null -> "Downloading ${(downloading.fraction * 100).toInt()}%"
         ready != null -> stringResource(R.string.install_now)
         failed != null -> stringResource(R.string.try_again)
-        pending.apkUrl == null -> stringResource(R.string.open_releases_page)
-        else -> "Download & Install"
+        else -> stringResource(R.string.download_update)
     }
 
     Column(
