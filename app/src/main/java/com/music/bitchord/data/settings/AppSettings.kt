@@ -978,7 +978,17 @@ object AppSettings {
         wifiOnlyDownloads.value = prefs.getBoolean(KEY_WIFI_ONLY_DOWNLOADS, true)
         exportDownloads.value = prefs.getBoolean(KEY_EXPORT_DOWNLOADS, false)
         syncDownloadedPlaylists.value = prefs.getBoolean(KEY_SYNC_DOWNLOADED_PLAYLISTS, false)
-        backgroundReleaseChecks.value = prefs.getBoolean(KEY_BACKGROUND_RELEASE_CHECKS, true)
+        // Keep background update checks active for all installs (including existing installs
+        // that previously had this turned off) so release checks stay scheduled by default.
+        backgroundReleaseChecks.value = true
+        if (!prefs.getBoolean(KEY_BACKGROUND_RELEASE_CHECKS, false)) {
+            prefs.edit().putBoolean(KEY_BACKGROUND_RELEASE_CHECKS, true).apply()
+        } else if (!prefs.contains(KEY_BACKGROUND_RELEASE_CHECKS)) {
+            prefs.edit().putBoolean(KEY_BACKGROUND_RELEASE_CHECKS, true).apply()
+        } else {
+            // Ensure persisted state is also active.
+            prefs.edit().putBoolean(KEY_BACKGROUND_RELEASE_CHECKS, true).apply()
+        }
         crossfadeSeconds.value = prefs.getInt(KEY_CROSSFADE, 0)
         smartFadeEnabled.value = prefs.getBoolean(KEY_SMART_FADE, false)
         automixPerformanceMode.value = runCatching {
