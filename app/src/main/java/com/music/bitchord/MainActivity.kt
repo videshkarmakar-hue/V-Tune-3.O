@@ -6213,5 +6213,7 @@ private object PlayerSheetShape : Shape {
 
 private const val TAB_HOME = 0
 private const val TAB_EXPLORE = 1
+import com.music.bitchord.ui.components.MandatoryUpdateHost
+
 private const val TAB_LIBRARY = 2
 private const val TAB_SEARCH = 3
