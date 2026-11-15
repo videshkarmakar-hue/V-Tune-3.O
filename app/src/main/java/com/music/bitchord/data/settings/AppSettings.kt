@@ -1849,10 +1849,11 @@ object AppSettings {
         prefs.edit().putBoolean(KEY_SYNC_DOWNLOADED_PLAYLISTS, value).apply()
     }
 
-    fun setBackgroundReleaseChecks(context: Context, value: Boolean) {
-        backgroundReleaseChecks.value = value
-        prefs.edit().putBoolean(KEY_BACKGROUND_RELEASE_CHECKS, value).apply()
-        com.music.bitchord.update.ReleaseUpdateScheduler.applyBackgroundCheckSetting(context, value)
+    fun setBackgroundReleaseChecks(context: Context, @Suppress("UNUSED_PARAMETER") value: Boolean) {
+        // Automatic/background release checks removed; updates are manual from Settings.
+        backgroundReleaseChecks.value = false
+        prefs.edit().putBoolean(KEY_BACKGROUND_RELEASE_CHECKS, false).apply()
+        com.music.bitchord.update.ReleaseUpdateScheduler.cancel(context)
     }
 
     fun setLastfmPrimaryArtistOnly(value: Boolean) {

@@ -75,7 +75,7 @@ fun SoftwareUpdateScreen(
     showBack: Boolean = onBack != null,
     modifier: Modifier = Modifier,
 ) {
-        val context = LocalContext.current
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val pending by AppUpdateManager.pending.collectAsState()
     val download by AppUpdateManager.download.collectAsState()
@@ -83,10 +83,6 @@ fun SoftwareUpdateScreen(
     val allowCellular by AppUpdateManager.allowCellularDownload.collectAsState()
     val frequency by AppUpdateManager.checkFrequency.collectAsState()
     val lastChecked by AppUpdateManager.lastCheckedWallMs.collectAsState()
-    val backgroundChecks by AppSettings.backgroundReleaseChecks.collectAsStateWithLifecycle()
-    val notificationPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { /* best effort: checks run regardless; notifications post when granted */ }
 
     val bg = Brush.radialGradient(
         colors = listOf(
@@ -157,22 +153,9 @@ fun SoftwareUpdateScreen(
                 allowCellular = allowCellular,
                 frequency = frequency,
                 lastCheckedMs = lastChecked,
-                backgroundChecks = backgroundChecks,
                 onAutoWifi = { AppUpdateManager.setAutoUpdateWifi(context, it) },
                 onAllowCellular = { AppUpdateManager.setAllowCellularDownload(context, it) },
                 onFrequency = { AppUpdateManager.setCheckFrequency(context, it) },
-                onBackgroundChecks = { enabled ->
-                    AppSettings.setBackgroundReleaseChecks(context, enabled)
-                    if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        val granted = ContextCompat.checkSelfPermission(
-                            context,
-                            Manifest.permission.POST_NOTIFICATIONS
-                        ) == PackageManager.PERMISSION_GRANTED
-                        if (!granted) {
-                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        }
-                    }
-                },
             )
 
             Spacer(Modifier.height(24.dp))
@@ -432,17 +415,12 @@ private fun UpdatePreferencesSection(
     allowCellular: Boolean,
     frequency: AppUpdateManager.CheckFrequency,
     lastCheckedMs: Long,
-    backgroundChecks: Boolean,
     onAutoWifi: (Boolean) -> Unit,
     onAllowCellular: (Boolean) -> Unit,
     onFrequency: (AppUpdateManager.CheckFrequency) -> Unit,
-    onBackgroundChecks: (Boolean) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val notificationsGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-    } else true
     val lastCheckedText = if (lastCheckedMs > 0L) {
         val df = DateFormat.getMediumDateFormat(context)
         val tf = DateFormat.getTimeFormat(context)
@@ -467,21 +445,8 @@ private fun UpdatePreferencesSection(
                 .border(1.dp, Color(0x388A93BB), RoundedCornerShape(16.dp)),
         ) {
             PrefToggleRow(
-                title = stringResource(R.string.background_release_checks_title),
-                subtitle = buildString {
-                    append(stringResource(R.string.background_release_checks_subtitle))
-                    if (backgroundChecks && !notificationsGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        append(" • ")
-                        append(stringResource(R.string.notification_permission_needed_for_updates))
-                    }
-                },
-                checked = backgroundChecks,
-                onCheckedChange = onBackgroundChecks,
-                showDivider = true,
-            )
-            PrefToggleRow(
                 title = "Auto-Update over Wi-Fi",
-                subtitle = "Installs updates when device is charging",
+                subtitle = "Automatically download updates when connected to Wi-Fi",
                 checked = autoWifi,
                 onCheckedChange = onAutoWifi,
                 showDivider = true,
