@@ -135,8 +135,6 @@ fun SoftwareUpdateScreen(
                                     val refreshed = AppUpdateManager.check(context, force = true)
                                     if (refreshed?.apkUrl != null) {
                                         AppUpdateManager.startDownload(context)
-                                    } else {
-                                        AppUpdateManager.openReleasePage(context)
                                     }
                                 }
                             }

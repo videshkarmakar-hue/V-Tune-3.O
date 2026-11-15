@@ -214,10 +214,7 @@ fun MandatoryUpdateHost(
                     }
                 }
             },
-            onOpenRelease = {
-                // Fallback only when no direct APK can be resolved; still required to update.
-                AppUpdateManager.openReleasePage(context)
-            },
+
         )
     }
 }
@@ -231,7 +228,6 @@ private fun MandatoryUpdateContent(
     download: AppUpdateManager.DownloadState,
     checking: Boolean,
     onPrimary: () -> Unit,
-    onOpenRelease: () -> Unit,
 ) {
     val downloading = download as? AppUpdateManager.DownloadState.Downloading
     val ready = download as? AppUpdateManager.DownloadState.Ready
@@ -354,23 +350,11 @@ private fun MandatoryUpdateContent(
 
             if (!hasApk && failed == null && ready == null) {
                 Text(
-                    text = "If direct download is unavailable for this release, open the release page to get the update.",
+                    text = "A direct download for this update is not available right now. Check again later from Settings.",
                     color = Color(0xFF9CA3BF),
                     fontSize = 11.sp,
                     textAlign = TextAlign.Center,
                 )
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(42.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xB3242633))
-                        .border(1.dp, Color(0x338A93BB), CircleShape)
-                        .clickable { onOpenRelease() },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("Open Release Page", color = Color(0xFFB8BED6), fontWeight = FontWeight.Medium, fontSize = 13.sp)
-                }
             }
 
             if (failed != null) {
