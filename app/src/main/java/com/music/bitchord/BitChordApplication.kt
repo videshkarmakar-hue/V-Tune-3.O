@@ -174,12 +174,9 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         ListeningStats.init(this)
         // After AppSettings, whose switch decides whether half of it runs.
         ArtistFacts.init(this)
-        // Apply background release checks (WorkManager, rescheduled on boot/app update)
-        // so new releases can be detected and updates enforced automatically when enabled.
-        runCatching { com.music.bitchord.update.ReleaseUpdateScheduler.rescheduleIfEnabled(this) }
-        // Subscribe to FCM release-update topic so published releases can trigger
-        // push notifications even when the app is closed (requires Firebase config in build).
-        ReleasePushMessagingService.subscribeToReleaseTopic()
+        // Automatic/background update checks and mandatory auto-update prompts are disabled.
+        // Users update manually from Settings > Software update.
+        runCatching { com.music.bitchord.update.ReleaseUpdateScheduler.cancel(this) }
         // One cache directory can only be opened once per process, and
         // PlaybackService shares this one — so it's opened here, not there.
         AudioCache.init(this)

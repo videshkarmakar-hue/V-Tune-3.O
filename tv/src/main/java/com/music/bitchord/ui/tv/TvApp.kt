@@ -64,7 +64,6 @@ import com.music.bitchord.data.settings.TvSettings
 import com.music.bitchord.playback.PlayerState
 import com.music.bitchord.ui.MainViewModel
 import com.music.bitchord.data.AppUpdateManager
-import com.music.bitchord.ui.components.MandatoryUpdateHost
 import com.music.bitchord.ui.tv.components.LocalTvChrome
 import com.music.bitchord.ui.tv.components.TvArtwork
 import com.music.bitchord.ui.tv.components.TvChrome
@@ -245,11 +244,6 @@ fun TvApp(
             )
         }
 
-        // The same mandatory gate the phone mounts, in its own window over
-        // setup, the shell and every TV dialog.
-        MandatoryUpdateHost(
-            navigationKey = Triple(isRunningSetup, showAccountDialog, isNowPlayingOpen),
-        )
     }
 }
 
