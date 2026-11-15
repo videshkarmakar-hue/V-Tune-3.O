@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: "Publish tag and GitHub Release when decision is GO (explicit). If false, prepare/validate and report GO/NO-GO only."
+        description: "Publish tag and GitHub Release when decision is GO (manual approval gate). If false, prepare/validate and report GO/NO-GO only."
         required: true
         default: "false"
         type: choice
@@ -47,10 +47,10 @@ concurrency:
 
 jobs:
   release-agent:
-    name: Detect, Validate, Decide (and Publish when GO)
+    name: Detect, Validate, Decide (GO/NO-GO)
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    # Do not attempt publish from forks (no write/secrets). Validation/decision still runs best-effort.
+    # Do not attempt trusted build/publish from forks. Validation/decision runs best-effort.
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
 
     steps:
@@ -172,25 +172,21 @@ PY
             dist/release/
           if-no-files-found: warn
 
-      - name: Auto-publish GitHub Release (GO only, safe automated path)
-        if: >-
-          ${{
-            steps.prepare.outputs.decision == 'GO' && (
-              (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-              (github.event_name == 'workflow_dispatch' && inputs.publish == 'true')
-            )
-          }}
+      - name: Publish GitHub Release (manual dispatch + GO only)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish == 'true' && steps.prepare.outputs.decision == 'GO' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          MODULES="${{ github.event_name == 'workflow_dispatch' && inputs.modules || 'app,tv,wearos' }}"
-          TARGET="${{ github.event_name == 'workflow_dispatch' && inputs.target || 'main' }}"
+          MODULES="${{ inputs.modules }}"
+          TARGET="${{ inputs.target }}"
           DRAFT_FLAG=""
-          if [ "${{ github.event_name == 'workflow_dispatch' && inputs.draft }}" = "true" ]; then
+          if [ "${{ inputs.draft }}" = "true" ]; then
             DRAFT_FLAG="--draft"
           fi
-          # Publish from prepared, validated assets. Agent re-validates and will refuse if not GO/safe.
+          # Manual approval gate: publishing runs only via explicit workflow_dispatch (publish=true)
+          # and only when the agent's definitive decision is GO. The agent re-validates and refuses
+          # incomplete/invalid/duplicate/NO-GO releases.
           python3 scripts/release_agent.py \
             --modules "$MODULES" \
             --search-dir dist/release \
@@ -213,6 +209,6 @@ PY
             gh release view "$TAG_NAME" --json tagName,name,assets,url,isDraft,isPrerelease
           else
             echo "Tag $TAG_NAME pushed but no GitHub Release found."
-            echo "If this tag/version is GO and release assets are valid, the automated/main or manual publish path can create it."
+            echo "Run the Release Automation workflow manually (workflow_dispatch, publish=true) after reviewing a GO decision and prepared assets to publish it."
             exit 1
           fi

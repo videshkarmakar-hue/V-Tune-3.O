@@ -1,6 +1,6 @@
 # GitHub Release Automation (BitChord / V-Tune)
 
-This repository includes a release automation agent and GitHub Actions workflow that detect project/version/APK changes, prepare and validate release assets, generate release notes, determine a **definitive GO/NO-GO**, and (only when safe) publish a properly structured GitHub Release.
+This repository includes a release automation agent and GitHub Actions workflow that detect project/version/APK changes, prepare and validate release assets, generate release notes, and determine a **definitive GO/NO-GO** on every change. Publishing is **manually gated** (explicit `workflow_dispatch` with `publish=true`) and is allowed only when the decision is **GO** and all safety checks pass.
 
 ## Components
 
@@ -18,18 +18,23 @@ This repository includes a release automation agent and GitHub Actions workflow 
 - `.github/workflows/release.yml` — CI automation workflow
   - Triggers on **every push** (any branch), **pull requests**, **`v*` tag pushes**, and **manual dispatch**
   - Runs detection, signed-release build (when signing secrets are available in trusted contexts), asset preparation/validation, and GO/NO-GO reporting
-  - **Automatically publishes** only on a safe, GO path (see below); never auto-publishes incomplete, invalid, or duplicate releases
+  - **Publishes only via manual dispatch** (`publish=true`) **and only when the decision is GO**; never publishes incomplete, invalid, or duplicate releases
   - Uploads the prepared bundle/report as a workflow artifact for inspection
 
 ## Triggers and automated behavior
 
-- **Push (any branch, any file add/modify/delete):** runs immediately to detect changes, evaluate version/APK/release state, and report a definitive **GO/NO-GO**. This provides automated tracking/validation on every project change without publishing unsafe releases.
+- **Push (any branch, any file add/modify/delete):** runs immediately to detect changes, evaluate version/APK/release state, and report a definitive **GO/NO-GO**. This provides automated tracking/validation on every project change (no publish).
 - **Pull request:** runs detection/validation/decision (no publish).
-- **Push to `main` (default release branch):** if release signing secrets are available the workflow builds signed prod release APKs, prepares/validates assets, and computes the decision. **If and only if the decision is GO**, it automatically creates/pushes the tag and publishes the GitHub Release (no manual publish click required).
 - **Push tag `v*`:** validates that a corresponding GitHub Release exists for the tag (and reports if missing).
-- **Manual dispatch (`workflow_dispatch`):** can build/prepare/validate and, when `publish=true` **and** decision is GO, publish to the chosen target (draft optional).
+- **Manual dispatch (`workflow_dispatch`) — publish gate:** builds/prepares/validates and, when **`publish=true` and the decision is GO**, creates/pushes the tag and publishes the GitHub Release to the chosen target (draft optional). This is the only CI publish path (explicit manual intent required).
 
-> Important: “Fully automated publishing” applies only to **GO** releases. Any file change that does not produce a valid, releasable, non-duplicate GO state results in **NO-GO** (reported with blockers) and **no publish**.
+> Publishing is never automatic on push. A **GO** decision means the release is required and ready *if explicitly approved*; **NO-GO** or any safety failure blocks publishing.
+
+## Release process review (gate)
+
+**Auto-publishing every GO release on pushes to `main` (no manual approval):** convenient, but any push/merge to `main` that reaches a valid, non-duplicate **GO** state (version bumped, relevant changes, signed release APKs available/built) would publish immediately without a human check on timing, notes, or assets. That is risky if `main` can reach GO unintentionally or if releases should be deliberate, reviewed events.
+
+**Current choice (gated):** keep **GO/NO-GO detection on all changes**, but **restrict publishing to manual `workflow_dispatch` with `publish=true` and GO**. For an additional GitHub-side approval gate, configure a protected GitHub **Environment** (e.g. `release`) with required reviewers and attach `environment: release` to the publish step/job in `.github/workflows/release.yml`.
 
 ## Versioning source of truth
 
@@ -126,8 +131,8 @@ Repository secrets (for signed, publishable APKs and release creation):
 
 Without signing secrets, the workflow still runs detection/validation/decision on pushes/PRs but cannot produce valid signed APKs, so release decisions will typically be **NO-GO** and nothing will be published (by design).
 
-### Automated publish path
-On pushes to `main`, the workflow builds signed APKs (when possible), prepares/validates, and **auto-publishes only if GO**. Manual dispatch can also publish when `publish=true` and GO. Prepared bundles/reports are uploaded as artifacts for auditability.
+### Publish path (gated)
+The workflow builds/prepares/validates and computes **GO/NO-GO** on relevant triggers but does **not** auto-publish on push. To publish: review the artifact/report and confirm a **GO** decision, then run **Actions → Release Automation → Run workflow** with `publish=true` (and desired target/modules/draft). The agent re-validates and publishes only if GO and all safety checks pass. Prepared bundles/reports are uploaded as artifacts for auditability.
 
 ## Safeguards and guarantees
 
@@ -143,7 +148,7 @@ On pushes to `main`, the workflow builds signed APKs (when possible), prepares/v
 - **"No valid release APK assets found" / NO-GO on APKs**: ensure signed `*Release*.apk` files exist (CI signing secrets configured, or local build) or pass `--search-dir`.
 - **"Duplicate release detected"**: tag/release already exists; bump `bitchordVersionName`/`bitchordVersionCode` in `build.gradle.kts` and rebuild.
 - **NO-GO due to change detection**: provide a correct `--base-ref` so relevant changes can be evaluated definitively.
-- **No auto-publish on push**: expected unless running on `main` (or explicit manual publish) **and** decision is GO with valid signed assets and no duplicates.
+- **No publish on push**: expected by design. Publishing requires manual `workflow_dispatch` with `publish=true` **and** a GO decision with valid signed assets and no duplicates.
 - **`gh` errors/auth failures**: authenticate locally (`gh auth login`) or ensure Actions permissions include `contents: write`.
 - **Dirty working tree on publish**: publish from a clean, known state.
 
