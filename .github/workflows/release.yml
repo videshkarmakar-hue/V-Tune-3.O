@@ -1,10 +1,16 @@
 name: Release Automation
 
 on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "v*"
+  pull_request:
   workflow_dispatch:
     inputs:
       publish:
-        description: "Publish tag and GitHub Release (requires explicit approval intent). If false, runs prepare/validation only."
+        description: "Publish tag and GitHub Release when decision is GO (explicit). If false, prepare/validate and report GO/NO-GO only."
         required: true
         default: "false"
         type: choice
@@ -31,22 +37,21 @@ on:
         default: "false"
         type: choice
         options: ["false", "true"]
-  push:
-    tags:
-      - "v*"
 
 permissions:
   contents: write
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  prepare-release:
-    name: Build, Prepare, Validate (and Publish if requested)
+  release-agent:
+    name: Detect, Validate, Decide (and Publish when GO)
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # Do not attempt publish from forks (no write/secrets). Validation/decision still runs best-effort.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
 
     steps:
       - name: Checkout repository
@@ -59,8 +64,23 @@ jobs:
         with:
           python-version: "3.x"
 
+      - name: Determine build/signing availability
+        id: signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          available=false
+          if [ -n "${KEYSTORE_BASE64:-}" ] && [ -n "${KEYSTORE_PASSWORD:-}" ] && [ -n "${KEY_ALIAS:-}" ] && [ -n "${KEY_PASSWORD:-}" ]; then
+            available=true
+          fi
+          echo "available=$available" >> "$GITHUB_OUTPUT"
+
       - name: Set up JDK 17
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build == 'true' }}
+        if: ${{ steps.signing.outputs.available == 'true' && (github.event_name != 'workflow_dispatch' || inputs.build == 'true') && github.event_name != 'pull_request' }}
         uses: actions/setup-java@v4
         with:
           java-version: "17"
@@ -68,7 +88,7 @@ jobs:
           cache: gradle
 
       - name: Setup signing and local properties
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build == 'true' }}
+        if: ${{ steps.signing.outputs.available == 'true' && (github.event_name != 'workflow_dispatch' || inputs.build == 'true') && github.event_name != 'pull_request' }}
         env:
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
@@ -83,11 +103,6 @@ jobs:
           [ -n "${LASTFM_API_KEY:-}" ] && echo "LASTFM_API_KEY=$LASTFM_API_KEY" >> local.properties || true
           [ -n "${LASTFM_SECRET:-}" ] && echo "LASTFM_SECRET=$LASTFM_SECRET" >> local.properties || true
           [ -n "${LISTEN_TOGETHER_SERVER:-}" ] && echo "LISTEN_TOGETHER_SERVER=$LISTEN_TOGETHER_SERVER" >> local.properties || true
-
-          if [ -z "${KEYSTORE_BASE64:-}" ] || [ -z "${KEYSTORE_PASSWORD:-}" ] || [ -z "${KEY_ALIAS:-}" ] || [ -z "${KEY_PASSWORD:-}" ]; then
-            echo "Release signing secrets are required to build publishable APKs." >&2
-            exit 1
-          fi
           echo "$KEYSTORE_BASE64" | base64 -d > bitchord-release.jks
           {
             echo "storeFile=bitchord-release.jks"
@@ -97,48 +112,92 @@ jobs:
           } > keystore.properties
 
       - name: Grant execute permission for gradlew
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build == 'true' }}
+        if: ${{ steps.signing.outputs.available == 'true' && (github.event_name != 'workflow_dispatch' || inputs.build == 'true') && github.event_name != 'pull_request' }}
         run: chmod +x gradlew
 
       - name: Build signed prod release APKs
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build == 'true' }}
+        if: ${{ steps.signing.outputs.available == 'true' && (github.event_name != 'workflow_dispatch' || inputs.build == 'true') && github.event_name != 'pull_request' }}
         run: ./gradlew :app:assembleProdRelease :tv:assembleProdRelease :wearos:assembleProdRelease --stacktrace
 
-      - name: Prepare and validate release assets
+      - name: Prepare, validate, and determine release decision (GO/NO-GO)
         id: prepare
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
+          set +e
           mkdir -p dist/release
+          MODULES="${{ github.event_name == 'workflow_dispatch' && inputs.modules || 'app,tv,wearos' }}"
+          BASE_REF=""
+          if [ "${{ github.event_name }}" = "push" ] && [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            BASE_REF="${{ github.event.before }}"
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_REF="${{ github.event.pull_request.base.sha }}"
+          else
+            git fetch origin main --depth=50 >/dev/null 2>&1 || true
+            BASE_REF="origin/main"
+          fi
+          echo "Using base ref: ${BASE_REF:-<none>}"
           python3 scripts/release_agent.py \
-            --modules "${{ github.event_name == 'workflow_dispatch' && inputs.modules || 'app,tv,wearos' }}" \
-            --base-ref "${{ github.event_name == 'push' && github.event.before || 'origin/main' }}" \
+            --modules "$MODULES" \
+            ${BASE_REF:+--base-ref "$BASE_REF"} \
             --dist-dir dist/release \
             --json-report dist/release/release-report.json \
             --notes-file dist/release/RELEASE_NOTES.md \
-            --prepare-only
+            --allow-dirty
+          RC=$?
+          set -e
+          echo "rc=$RC" >> "$GITHUB_OUTPUT"
+          DECISION="UNKNOWN"
+          if [ -f dist/release/release-report.json ]; then
+            DECISION=$(python3 - <<'PY'
+import json
+try:
+  d=json.load(open('dist/release/release-report.json','r',encoding='utf-8'))
+  print(((d.get('decision') or {}).get('decision') or 'UNKNOWN'))
+except Exception:
+  print('UNKNOWN')
+PY
+)
+          fi
+          echo "decision=$DECISION" >> "$GITHUB_OUTPUT"
+          echo "Release decision: $DECISION"
+          exit $RC
 
-      - name: Upload prepared release bundle
+      - name: Upload release report/bundle
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: release-bundle
-          path: dist/release/
+          name: release-bundle-${{ github.run_id }}
+          path: |
+            dist/release/
+          if-no-files-found: warn
 
-      - name: Publish GitHub Release (manual explicit approval intent)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish == 'true' }}
+      - name: Auto-publish GitHub Release (GO only, safe automated path)
+        if: >-
+          ${{
+            steps.prepare.outputs.decision == 'GO' && (
+              (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+              (github.event_name == 'workflow_dispatch' && inputs.publish == 'true')
+            )
+          }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          # Re-run agent in publish mode using prepared assets in dist/release.
+          MODULES="${{ github.event_name == 'workflow_dispatch' && inputs.modules || 'app,tv,wearos' }}"
+          TARGET="${{ github.event_name == 'workflow_dispatch' && inputs.target || 'main' }}"
+          DRAFT_FLAG=""
+          if [ "${{ github.event_name == 'workflow_dispatch' && inputs.draft }}" = "true" ]; then
+            DRAFT_FLAG="--draft"
+          fi
+          # Publish from prepared, validated assets. Agent re-validates and will refuse if not GO/safe.
           python3 scripts/release_agent.py \
-            --modules "${{ inputs.modules }}" \
+            --modules "$MODULES" \
             --search-dir dist/release \
             --dist-dir dist/release-publish \
             --notes-file dist/release/RELEASE_NOTES.md \
-            --target "${{ inputs.target }}" \
-            ${{ inputs.draft == 'true' && '--draft' || '' }} \
+            --target "$TARGET" \
+            $DRAFT_FLAG \
             --publish \
             --json-report dist/release-publish/release-report.json
 
@@ -154,6 +213,6 @@ jobs:
             gh release view "$TAG_NAME" --json tagName,name,assets,url,isDraft,isPrerelease
           else
             echo "Tag $TAG_NAME pushed but no GitHub Release found."
-            echo "Create/publish the release via workflow_dispatch (publish=true) after assets are prepared, or publish from a trusted environment."
+            echo "If this tag/version is GO and release assets are valid, the automated/main or manual publish path can create it."
             exit 1
           fi

@@ -1,6 +1,6 @@
 # GitHub Release Automation (BitChord / V-Tune)
 
-This repository includes a release automation agent and GitHub Actions workflow to prepare, validate, and (when explicitly requested) publish GitHub Releases with versioned APK assets.
+This repository includes a release automation agent and GitHub Actions workflow that detect project/version/APK changes, prepare and validate release assets, generate release notes, determine a **definitive GO/NO-GO**, and (only when safe) publish a properly structured GitHub Release.
 
 ## Components
 
@@ -9,15 +9,27 @@ This repository includes a release automation agent and GitHub Actions workflow 
   - Detects release APKs from build output directories
   - Filters/validates publishable APKs (release, signed, correct module/version)
   - Renames assets consistently (e.g. `V-Tune-1.0.0-arm64-v8a.apk`, `V-Tune-TV-1.0.0-universal.apk`)
-  - Generates release notes and a machine-readable manifest
+  - Generates release notes and a machine-readable manifest/report
   - Checks for duplicate tags/releases before publish
-  - Determines whether a release is required and reports a **definitive GO/NO-GO** decision with reasons/blockers
-  - Publishes tag + GitHub Release via `gh` (only with `--publish`, and only when decision is GO)
+  - Determines whether a release is required and reports a **definitive GO/NO-GO** decision with criteria/reasons/blockers
+  - Publishes tag + GitHub Release via `gh` **only on explicit publish intent and only when the decision is GO**
   - Validates uploaded release assets after publish
 
 - `.github/workflows/release.yml` — CI automation workflow
-  - `workflow_dispatch`: build (optional), prepare/validate, upload prepared bundle, and optionally publish
-  - `push` on tags `v*`: validates that a GitHub Release exists for the tag
+  - Triggers on **every push** (any branch), **pull requests**, **`v*` tag pushes**, and **manual dispatch**
+  - Runs detection, signed-release build (when signing secrets are available in trusted contexts), asset preparation/validation, and GO/NO-GO reporting
+  - **Automatically publishes** only on a safe, GO path (see below); never auto-publishes incomplete, invalid, or duplicate releases
+  - Uploads the prepared bundle/report as a workflow artifact for inspection
+
+## Triggers and automated behavior
+
+- **Push (any branch, any file add/modify/delete):** runs immediately to detect changes, evaluate version/APK/release state, and report a definitive **GO/NO-GO**. This provides automated tracking/validation on every project change without publishing unsafe releases.
+- **Pull request:** runs detection/validation/decision (no publish).
+- **Push to `main` (default release branch):** if release signing secrets are available the workflow builds signed prod release APKs, prepares/validates assets, and computes the decision. **If and only if the decision is GO**, it automatically creates/pushes the tag and publishes the GitHub Release (no manual publish click required).
+- **Push tag `v*`:** validates that a corresponding GitHub Release exists for the tag (and reports if missing).
+- **Manual dispatch (`workflow_dispatch`):** can build/prepare/validate and, when `publish=true` **and** decision is GO, publish to the chosen target (draft optional).
+
+> Important: “Fully automated publishing” applies only to **GO** releases. Any file change that does not produce a valid, releasable, non-duplicate GO state results in **NO-GO** (reported with blockers) and **no publish**.
 
 ## Versioning source of truth
 
@@ -44,12 +56,29 @@ Prepared release assets are normalized to:
 
 `<abi>` is inferred from source APK names (`arm64-v8a`, `armeabi-v7a`, `x86_64`, `universal`). The main app prefix `V-Tune-` matches the in-app updater expectation.
 
+## Definitive GO/NO-GO decision
+
+The agent always reports a **definitive release decision** in logs and in the JSON report (`decision` with `criteria`, `reasons`, `blockers`, `summary`, plus `release_availability` and `release_relevance`).
+
+A release is **GO** only when all are true:
+- **Version/tag not already released:** no local tag, no origin tag, and no existing GitHub release for the target version/tag.
+- **Valid signed APKs present:** prepared release APKs are signed, correctly named/versioned, and include at least one **main app** APK (package must not be incomplete).
+- **Relevant project/version changes detected:** confirmed vs `--base-ref` (recommended, e.g. previous commit or `origin/main...HEAD`) or from relevant working-tree changes when no base ref is provided. If relevance cannot be confirmed, decision is **NO-GO**.
+
+If any criterion fails, decision is **NO-GO** and publishing is refused.
+
+Statuses:
+- `go_ready` — GO, ready; not published in prepare-only runs
+- `no_go` — not releasable/publishable (blockers reported), no publish
+- `published` — publish completed and post-publish assets validated
+- `failed` — execution/publish error
+
 ## Local usage
 
 ### Prerequisites
 - Python 3.x
-- Git configured with `user.name` and `user.email` (for publish/tagging)
-- GitHub CLI (`gh`) authenticated (for publish/validation against GitHub)
+- Git configured with `user.name` and `user.email` (for tagging/publish)
+- GitHub CLI (`gh`) authenticated (for duplicate/release checks and publish)
 - Built **signed** release APKs in standard Gradle output locations, or pass `--search-dir`
 
 ### Prepare and validate (safe, no publish)
@@ -61,22 +90,11 @@ python3 scripts/release_agent.py \
   --json-report dist/release/release-report.json
 ```
 
-Use `--base-ref` (e.g. `origin/main`) so the agent can definitively evaluate relevant project/version changes vs the compared ref. Without it, relevance is based only on relevant working-tree changes and the decision will be NO-GO if changes cannot be confirmed.
+Use `--base-ref` so relevant project/version changes are evaluated definitively. The agent reports GO/NO-GO and does **not** publish in this mode.
 
-Outputs in `dist/release/` (when assets can be prepared):
-- normalized APK assets
-- `RELEASE_NOTES.md`
-- `release-manifest.json`
+Outputs in `dist/release/` (when assets can be prepared): normalized APK assets, `RELEASE_NOTES.md`, `release-manifest.json`, and decision details in the report.
 
-The agent always reports a **definitive release decision** (`GO` or `NO-GO`) in logs and in the JSON report. It does **not** publish in prepare-only mode.
-
-Statuses:
-- `go_ready` — release is required and ready; publish allowed only if explicitly requested with `--publish`
-- `no_go` — release should not be published (missing/invalid APKs, duplicate/existing release, or relevant changes not confirmed/detected)
-- `published` — explicit publish completed and validated
-- `failed` — execution/publish error
-
-### Publish (explicit)
+### Publish (explicit / automated-safe)
 ```bash
 python3 scripts/release_agent.py \
   --modules app,tv,wearos \
@@ -86,79 +104,52 @@ python3 scripts/release_agent.py \
   --publish
 ```
 
-Publish is **strictly opt-in** (`--publish`) and will be refused unless the decision is **GO**. Publish mode will:
-1. Validate no duplicate local/remote tag or existing GitHub release exists
-2. Create and push annotated tag `v<display-version>`
-3. Create GitHub Release and upload prepared assets
-4. Validate the published release contains all expected assets
-
-Safety notes:
-- Duplicate-prevention checks cannot be skipped for publish (publishing with `--skip-duplicate-check` is refused).
-- The agent never auto-publishes incomplete, invalid, or duplicate releases.
+Publish is allowed **only** when the decision is **GO**. On GO, publish mode validates duplicates, creates/pushes annotated tag `v<display-version>`, creates the GitHub Release with prepared assets, and validates uploaded assets.
 
 ### Useful flags
 - `--search-dir <path>` (repeatable): add APK search locations
 - `--modules app,tv,wearos`: limit included modules
+- `--base-ref <ref>`: compare `<ref>...HEAD` for relevant change detection / GO-NO-GO (recommended)
+- `--target <branch/sha>`: release target for publish
 - `--draft`: publish as draft release
 - `--prerelease`: force prerelease
-- `--base-ref origin/main`: compare `origin/main...HEAD` for relevant change detection and go/no-go evaluation (recommended)
-- `--allow-dirty`: allow dirty working tree for prepare-only runs
+- `--allow-dirty`: allow dirty working tree for prepare-only/non-publish runs
 
-## GitHub Actions workflow
+## GitHub Actions configuration
 
-### Manual release run (recommended)
-1. Ensure version fields in `build.gradle.kts` are correct and committed.
-2. Go to **Actions → Release Automation → Run workflow**.
-3. Choose:
-   - `build=true` to build signed prod APKs in CI (requires signing secrets)
-   - `publish=false` for prepare/validation only (recommended first), or `true` to publish
-   - `modules`, `target`, `draft` as needed
-4. Download the `release-bundle` artifact to inspect prepared assets/notes/manifest.
-5. If prepare-only looked correct, rerun with `publish=true` (or publish from a trusted local environment).
-
-### Required repository secrets for CI build+publish
+### Required for automated build/publish on `main`
+Repository secrets (for signed, publishable APKs and release creation):
 - `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`
 - Optional build config: `LASTFM_API_KEY`, `LASTFM_SECRET`, `LISTEN_TOGETHER_SERVER`
 
-`GITHUB_TOKEN` (provided by Actions) is used for `gh` release operations; repository permissions must allow `contents: write`.
+`GITHUB_TOKEN` is used for `gh` release operations; repository/workflow permissions must allow `contents: write`.
 
-### Tag push behavior
-Pushing a `v*` tag triggers validation that a corresponding GitHub Release exists. It does **not** auto-create a release from a tag alone, to avoid publishing incomplete/invalid assets.
+Without signing secrets, the workflow still runs detection/validation/decision on pushes/PRs but cannot produce valid signed APKs, so release decisions will typically be **NO-GO** and nothing will be published (by design).
+
+### Automated publish path
+On pushes to `main`, the workflow builds signed APKs (when possible), prepares/validates, and **auto-publishes only if GO**. Manual dispatch can also publish when `publish=true` and GO. Prepared bundles/reports are uploaded as artifacts for auditability.
 
 ## Safeguards and guarantees
 
-- **No duplicate releases:** refuses publish if tag/release already exists (local, origin, or GitHub)
-- **No incomplete releases:** requires at least one valid main app release APK and version-matching asset names
-- **No unsigned assets:** unsigned APKs are rejected for publishable assets
-- **Definitive go/no-go before publish:** publish is allowed only when decision is GO (version/tag not already released, valid signed APKs present, and relevant project/version changes detected/confirmed)
-- **No destructive git ops:** agent does not reset/force-push/delete refs; publish creates/pushes a new annotated tag only
-- **Approval before publish:** CI publish path requires explicit `workflow_dispatch` input `publish=true` (strictly opt-in)
-- **Post-publish validation:** verifies release tag and uploaded asset names via `gh release view`
-- **Auditable outputs:** manifest/report/notes and decision details (criteria, reasons, blockers) are generated for inspection
-
-## Change detection and "release required" guidance
-
-The agent reports changed paths and emits a definitive **GO/NO-GO** decision in logs/report. A release is considered required/ready (**GO**) only when all are true:
-- Target version/tag is **not already released** (no local tag, no origin tag, no existing GitHub release)
-- **Valid signed release APKs** are present/prepared (release-only, signed, correctly named/versioned, and including the main app APK)
-- **Relevant project/version changes are detected** vs `--base-ref` (recommended, e.g. `origin/main...HEAD`), or confirmed from relevant working-tree changes when no base ref is provided
-
-If any criterion is not met, the decision is **NO-GO** with explicit blockers and no publish occurs. The workflow does **not** auto-publish on ordinary `main` pushes; publishing requires manual dispatch with explicit `publish=true` and a GO decision.
+- **No duplicate releases:** refuses publish if tag/release already exists (local, origin, or GitHub); duplicate checks cannot be bypassed for publish.
+- **No incomplete/invalid releases:** requires valid **signed** release APKs, correct versioned naming, and a main app APK; refuses unsafe/missing assets.
+- **GO-gated publishing:** automatic or explicit publish proceeds only on a definitive **GO** decision (not already released + valid signed APKs + relevant changes confirmed/detected).
+- **No destructive git ops:** agent does not reset/force-push/delete refs; publish creates/pushes a new annotated tag only.
+- **Post-publish validation:** verifies release tag and uploaded asset names via `gh release view`.
+- **Auditable outputs:** manifest, release notes, and JSON decision/report (availability, relevance, criteria, reasons, blockers) are generated for inspection.
 
 ## Troubleshooting
 
-- **"No valid release APK assets found"**: ensure signed `*Release*.apk` files exist under `app/tv/wearos/build/outputs/apk/...` or pass `--search-dir`.
-- **"Duplicate release detected"**: tag/release already exists; bump version in `build.gradle.kts` (and rebuild) instead of reusing.
-- **Decision is NO-GO due to change detection**: provide `--base-ref origin/main` (or an appropriate comparison ref) so relevant changes can be evaluated definitively; ensure version/project changes are committed in the compared range.
-- **Publish refused (NO-GO or skip-duplicate-check)**: fix reported blockers first; publish is only allowed on an explicit GO with duplicate checks enforced.
-- **"Unsigned APK is not publishable"**: provide signing config/keystore and rebuild release APKs.
-- **`gh` errors/auth failures**: authenticate locally (`gh auth login`) or ensure Actions `GITHUB_TOKEN` permissions include `contents: write`.
-- **Dirty working tree on publish**: commit or stash changes first; publish from a clean, known state.
-- **Missing module APKs**: adjust `--modules` intentionally (e.g. `--modules app`) if only phone app is being released, but do not claim other modules were included.
+- **"No valid release APK assets found" / NO-GO on APKs**: ensure signed `*Release*.apk` files exist (CI signing secrets configured, or local build) or pass `--search-dir`.
+- **"Duplicate release detected"**: tag/release already exists; bump `bitchordVersionName`/`bitchordVersionCode` in `build.gradle.kts` and rebuild.
+- **NO-GO due to change detection**: provide a correct `--base-ref` so relevant changes can be evaluated definitively.
+- **No auto-publish on push**: expected unless running on `main` (or explicit manual publish) **and** decision is GO with valid signed assets and no duplicates.
+- **`gh` errors/auth failures**: authenticate locally (`gh auth login`) or ensure Actions permissions include `contents: write`.
+- **Dirty working tree on publish**: publish from a clean, known state.
 
 ## Extending
 
-- Add checksum files (`.sha256`) upload if desired by extending `prepare_assets`/publish steps.
-- Integrate changelog sources (PR labels, conventional commits) by enhancing `generate_release_notes`.
-- Add environment protection rules in GitHub for an additional manual approval gate on publish jobs.
-- Tune "relevant change" paths/patterns in `evaluate_release_relevance` if release scope changes.
+- Add checksum files (`.sha256`) upload by extending asset preparation/publish.
+- Integrate richer changelog sources (PR labels, conventional commits) in `generate_release_notes`.
+- Add GitHub environment protection rules for an additional approval gate if desired.
+- Tune "relevant change" paths/patterns in `evaluate_release_relevance` to match release scope.
