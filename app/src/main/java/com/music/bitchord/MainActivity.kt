@@ -243,6 +243,7 @@ import com.music.bitchord.ui.components.menuAnchor
 import com.music.bitchord.ui.components.IosMenuPopover
 import com.music.bitchord.ui.components.SongActionsMenu
 import com.music.bitchord.ui.components.HeldContextMenu
+import com.music.bitchord.ui.components.MandatoryUpdateHost
 import com.music.bitchord.ui.components.HeldItem
 import androidx.media3.session.MediaController
 import com.music.bitchord.playback.QualityUpgrade
@@ -6213,7 +6214,5 @@ private object PlayerSheetShape : Shape {
 
 private const val TAB_HOME = 0
 private const val TAB_EXPLORE = 1
-import com.music.bitchord.ui.components.MandatoryUpdateHost
-
 private const val TAB_LIBRARY = 2
 private const val TAB_SEARCH = 3
