@@ -42,6 +42,7 @@ import com.music.bitchord.data.stats.ArtistFacts
 import com.music.bitchord.data.stats.ListeningStats
 import com.music.bitchord.download.Downloads
 import com.music.bitchord.download.PlaylistSync
+import com.music.bitchord.update.ReleaseUpdateScheduler
 import androidx.work.Configuration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -172,6 +173,9 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         ListeningStats.init(this)
         // After AppSettings, whose switch decides whether half of it runs.
         ArtistFacts.init(this)
+        // Schedule background checks for new GitHub releases and notify when an update is found.
+        ReleaseUpdateScheduler.ensureScheduled(this)
+        ReleaseUpdateScheduler.enqueueImmediateCheck(this)
         // One cache directory can only be opened once per process, and
         // PlaybackService shares this one — so it's opened here, not there.
         AudioCache.init(this)

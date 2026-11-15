@@ -152,6 +152,11 @@
     <string name="update_available">Update available: v%1$s</string>
     <string name="software_update">Software Update</string>
     <string name="update_available_body">V-Tune 3.O %1$s is available to download.</string>
+    <string name="app_update_notification_channel_name">App updates</string>
+    <string name="app_update_notification_channel_desc">Notifications when a new V-Tune 3.O release is available</string>
+    <string name="app_update_notification_title">New update available</string>
+    <string name="app_update_notification_text">V-Tune 3.O %1$s is available. Tap to open the app and update.</string>
+    <string name="app_update_notification_action_view">View release</string>
     <string name="update_downloading_body">Downloading V-Tune 3.O %1$s…</string>
     <string name="update_ready_body">V-Tune 3.O %1$s is ready to install.</string>
     <string name="update_failed_body">Couldn’t download V-Tune 3.O %1$s.</string>

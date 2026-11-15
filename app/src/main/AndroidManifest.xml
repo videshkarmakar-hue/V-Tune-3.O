@@ -11,6 +11,8 @@
     <!-- Saving a track to Music outlives the screen it was asked from. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Background release checks can reschedule and notify after reboot/app update. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- Touch feedback. The system's own haptics switch is honoured on top of
          this, so granting it doesn't override a user who turned buzzing off. -->
@@ -654,6 +656,20 @@
         <receiver
             android:name=".download.PlaylistSyncApproval"
             android:exported="false" />
+
+        <!-- Periodic GitHub release checks: reschedule/trigger after boot or app update so
+             update notifications can be shown even when the app is not running. -->
+        <receiver
+            android:name=".update.ReleaseUpdateBootReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
 
         <!--
           WorkManager comes up on first use instead of at every launch, since the
