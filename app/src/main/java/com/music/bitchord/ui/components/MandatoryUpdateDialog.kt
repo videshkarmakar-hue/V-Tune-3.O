@@ -76,21 +76,23 @@ fun MandatoryUpdateHost(
     val download by AppUpdateManager.download.collectAsState()
     var checking by remember { mutableStateOf(false) }
     var resolvingApk by remember { mutableStateOf(false) }
-    // Avoid re-launching the system installer in a loop for the same ready APK.
-    // Auto-prompt once per ready file; re-prompt on resume or explicit user action.
+    // Auto-prompt the installer once per ready APK to avoid launch loops.
+    // Manual "Install" remains available if the user dismisses/cancels the installer.
     var promptedInstallForPath by remember { mutableStateOf<String?>(null) }
-    var resumeRepromptTick by remember { mutableStateOf(0) }
 
     fun promptInstall(file: java.io.File) {
         promptedInstallForPath = file.absolutePath
         AppUpdateManager.installApk(context.findActivity() ?: context, file)
     }
 
-    fun forceCheck() {
+    fun ensureChecked(force: Boolean = false) {
         if (checking) return
         checking = true
         scope.launch {
-            runCatching { AppUpdateManager.check(app, force = true) }
+            runCatching {
+                if (force) AppUpdateManager.check(app, force = true)
+                else AppUpdateManager.checkIfStale(app)
+            }
             checking = false
         }
     }
@@ -100,20 +102,19 @@ fun MandatoryUpdateHost(
         AppUpdateManager.loadPreferences(app)
         AppUpdateManager.verifyInstalled(app)
         AppUpdateManager.resumeInstallIfWaiting(app)
-        // Clear any previous snooze; mandatory updates cannot be deferred.
         if (AppUpdateManager.isSnoozed()) AppUpdateManager.snooze(app, durationMs = 0L)
         runCatching { AppUpdateManager.check(app, force = true) }
     }
 
-    // Re-check when navigation/app state key changes while in use.
+    // Re-check when navigation/app state key changes while in use (throttled by manager TTL).
     LaunchedEffect(navigationKey) {
         AppUpdateManager.verifyInstalled(app)
         AppUpdateManager.resumeInstallIfWaiting(app)
         runCatching { AppUpdateManager.checkIfStale(app) }
     }
 
-    // Resume/foreground: verify install result, resume permission-gated install, and check again.
-    // Allow the ready installer prompt to be shown again after user returns (e.g. cancelled installer).
+    // Resume/foreground: verify install result, continue permission-gated install if needed,
+    // and refresh update state without forcing a network call on every resume.
     DisposableEffect(lifecycleOwner, app) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -121,8 +122,7 @@ fun MandatoryUpdateHost(
                     AppUpdateManager.verifyInstalled(app)
                     AppUpdateManager.resumeInstallIfWaiting(app)
                     if (AppUpdateManager.isSnoozed()) AppUpdateManager.snooze(app, durationMs = 0L)
-                    resumeRepromptTick++
-                    runCatching { AppUpdateManager.check(app, force = true) }
+                    runCatching { AppUpdateManager.checkIfStale(app) }
                 }
             }
         }
@@ -130,24 +130,28 @@ fun MandatoryUpdateHost(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // While app is open, keep polling for newly published releases so updates are detected promptly.
+    // While app is open and no update is pending, poll periodically for newly published releases.
     LaunchedEffect(app) {
         while (isActive) {
-            delay(60_000L)
+            delay(3 * 60_000L)
             if (AppUpdateManager.pending.value == null) {
                 runCatching { AppUpdateManager.check(app, force = true) }
             }
         }
     }
 
-    // Mandatory auto-update: if an update is pending, automatically download/install flow.
-    LaunchedEffect(pending?.version, pending?.apkUrl, download, resumeRepromptTick) {
-        val info = pending ?: return@LaunchedEffect
+    // Mandatory auto-update: automatically download and prompt install when an update is pending.
+    LaunchedEffect(pending?.version, pending?.apkUrl, download) {
+        val info = pending ?: run {
+            promptedInstallForPath = null
+            return@LaunchedEffect
+        }
         if (AppUpdateManager.isSnoozed()) AppUpdateManager.snooze(app, durationMs = 0L)
         when (val d = download) {
             is AppUpdateManager.DownloadState.Downloading -> Unit
             is AppUpdateManager.DownloadState.Ready -> {
-                // Auto-prompt once per ready file; re-prompt on resume or explicit user action.
+                // Auto-prompt once per ready file. If the user cancels the installer,
+                // the "Install now" action remains available (gate stays non-skippable).
                 if (promptedInstallForPath != d.file.absolutePath) {
                     promptInstall(d.file)
                 }
@@ -160,7 +164,8 @@ fun MandatoryUpdateHost(
                     resolvingApk = true
                     val refreshed = runCatching { AppUpdateManager.check(app, force = true) }.getOrNull()
                     resolvingApk = false
-                    if (!refreshed?.apkUrl.isNullOrBlank()) {
+                    val apkUrl = refreshed?.apkUrl ?: AppUpdateManager.pending.value?.apkUrl
+                    if (!apkUrl.isNullOrBlank()) {
                         AppUpdateManager.startDownload(app)
                     }
                 }
@@ -197,14 +202,14 @@ fun MandatoryUpdateHost(
                         if (!p?.apkUrl.isNullOrBlank()) {
                             AppUpdateManager.startDownload(app)
                         } else {
-                            forceCheck()
+                            ensureChecked(force = true)
                         }
                     }
                     is AppUpdateManager.DownloadState.Idle -> {
                         if (!p?.apkUrl.isNullOrBlank()) {
                             AppUpdateManager.startDownload(app)
                         } else {
-                            forceCheck()
+                            ensureChecked(force = true)
                         }
                     }
                 }
