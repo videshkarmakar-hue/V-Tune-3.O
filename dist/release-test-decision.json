@@ -1,0 +1,62 @@
+{
+  "status": "no_go",
+  "errors": [],
+  "warnings": [],
+  "version": {
+    "version_name": "1.0.0",
+    "version_code": 1,
+    "beta_suffix": "",
+    "tag": "v1.0.0",
+    "display_version": "1.0.0"
+  },
+  "changes": {
+    "working_tree_changed": [
+      "scripts/__pycache__/release_agent.cpython-313.pyc",
+      "scripts/release_agent.py"
+    ],
+    "diff_vs_base": [
+      "M\tscripts/__pycache__/release_agent.cpython-313.pyc",
+      "M\tscripts/release_agent.py"
+    ]
+  },
+  "release_availability": {
+    "tag": "v1.0.0",
+    "local_tag_exists": false,
+    "remote_tag_exists": false,
+    "github_release_exists": false,
+    "not_already_released": true
+  },
+  "release_relevance": {
+    "base_ref": "HEAD~1",
+    "evidence_source": "git diff HEAD~1...HEAD",
+    "relevant_changes_detected": true,
+    "version_config_changed": false,
+    "relevant_paths": [
+      "scripts/release_agent.py"
+    ],
+    "version_paths": [],
+    "relevant_working_tree_paths": [
+      "scripts/release_agent.py"
+    ]
+  },
+  "asset_validation_error": "No valid release APK assets found to publish",
+  "prerelease": false,
+  "decision": {
+    "decision": "NO-GO",
+    "go": false,
+    "summary": "NO-GO: release v1.0.0 should not be published automatically.",
+    "publish_requested": false,
+    "criteria": {
+      "version_tag_not_already_released": true,
+      "valid_signed_apks_present": false,
+      "relevant_project_or_version_changes_detected": true
+    },
+    "reasons": [
+      "Target version/tag v1.0.0 is not already released (no local/remote tag or GitHub release found).",
+      "Relevant project/version changes detected (git diff HEAD~1...HEAD)."
+    ],
+    "blockers": [
+      "Valid signed release APKs are not ready: No valid release APK assets found to publish"
+    ]
+  }
+}
