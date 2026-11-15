@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: "Publish tag and GitHub Release when decision is GO (manual approval gate). If false, prepare/validate and report GO/NO-GO only."
+        description: "Manual publish: create tag and GitHub Release when decision is GO. Pushes to main auto-publish on GO; if false on manual runs, prepare/validate and report GO/NO-GO only."
         required: true
         default: "false"
         type: choice
@@ -188,20 +188,26 @@ PY
             dist/release/
           if-no-files-found: warn
 
-      - name: Publish GitHub Release (manual dispatch + GO only)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish == 'true' && steps.prepare.outputs.decision == 'GO' }}
+      - name: Publish GitHub Release (GO only: push to main auto-publish or manual dispatch)
+        if: ${{ steps.prepare.outputs.decision == 'GO' && ((github.event_name == 'workflow_dispatch' && inputs.publish == 'true') || (github.event_name == 'push' && github.ref == 'refs/heads/main')) }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          MODULES="${{ inputs.modules }}"
-          TARGET="${{ inputs.target }}"
-          DRAFT_FLAG=""
-          if [ "${{ inputs.draft }}" = "true" ]; then
-            DRAFT_FLAG="--draft"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            MODULES="${{ inputs.modules }}"
+            TARGET="${{ inputs.target }}"
+            DRAFT_FLAG=""
+            if [ "${{ inputs.draft }}" = "true" ]; then
+              DRAFT_FLAG="--draft"
+            fi
+          else
+            # Automatic publish for push-to-main only (GO-gated). Safeguards remain enforced by release_agent.py.
+            MODULES="app,tv,wearos"
+            TARGET="${{ github.sha }}"
+            DRAFT_FLAG=""
           fi
-          # Manual approval gate: publishing runs only via explicit workflow_dispatch (publish=true)
-          # and only when the agent's definitive decision is GO. The agent re-validates and refuses
+          # Publish only when the agent's definitive decision is GO. The agent re-validates and refuses
           # incomplete/invalid/duplicate/NO-GO releases.
           python3 scripts/release_agent.py \
             --modules "$MODULES" \
