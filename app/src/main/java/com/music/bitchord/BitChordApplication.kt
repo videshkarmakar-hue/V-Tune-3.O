@@ -43,7 +43,6 @@ import com.music.bitchord.data.stats.ListeningStats
 import com.music.bitchord.download.Downloads
 import com.music.bitchord.download.PlaylistSync
 // Automatic release update scheduling removed; updates are manual from Settings.
-import com.music.bitchord.update.ReleasePushMessagingService
 import androidx.work.Configuration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
