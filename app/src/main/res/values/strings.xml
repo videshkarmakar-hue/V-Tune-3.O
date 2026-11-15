@@ -187,6 +187,9 @@
     <string name="checking_for_update">Checking for updates…</string>
     <string name="update_up_to_date">You’re on the latest version</string>
     <string name="update_check_failed">Couldn’t check for updates. Try again in a moment.</string>
+    <string name="background_release_checks_title">Background update checks</string>
+    <string name="background_release_checks_subtitle">Periodically check for new releases and notify you (best effort; FCM push is faster when available)</string>
+    <string name="notification_permission_needed_for_updates">Allow notifications to get update alerts</string>
     <string name="log_copied">Log copied · %1$d lines</string>
     <string name="sign_in_youtube_music">Sign in to YouTube Music</string>
     <string name="choose_a_channel">Choose a channel</string>
