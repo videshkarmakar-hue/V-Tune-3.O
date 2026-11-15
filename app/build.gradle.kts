@@ -285,6 +285,11 @@ dependencies {
     implementation(project(":shared"))
     implementation(project(":sharedUi"))
 
+    // Firebase Cloud Messaging for release/update push notifications (topic: app-updates).
+    // Requires google-services.json in this module (or provided via CI) for FCM to initialize.
+    implementation(platform("com.google.firebase:firebase-bom:34.8.0"))
+    implementation("com.google.firebase:firebase-messaging")
+
     // ---- Compose (Material 3) ----
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
     implementation(composeBom)
@@ -461,6 +466,19 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
+}
+
+// Apply Google Services only when a Firebase config is present so local builds remain possible
+// without google-services.json; FCM push requires the config in builds that should receive pushes.
+if (
+    file("google-services.json").exists() ||
+    file("src/google-services.json").exists() ||
+    file("src/prod/google-services.json").exists() ||
+    file("src/dev/google-services.json").exists() ||
+    file("src/prod/release/google-services.json").exists() ||
+    file("src/prod/debug/google-services.json").exists()
+) {
+    apply(plugin = "com.google.gms.google-services")
 }
 
 /*

@@ -671,6 +671,16 @@
             </intent-filter>
         </receiver>
 
+        <!-- Firebase Cloud Messaging: receives GitHub-release push notifications on the
+             "app-updates" topic so users can be alerted even when the app is closed. -->
+        <service
+            android:name=".update.ReleasePushMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
         <!--
           WorkManager comes up on first use instead of at every launch, since the
           one thing using it is a setting that is off by default.

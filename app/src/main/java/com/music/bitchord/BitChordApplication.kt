@@ -43,6 +43,7 @@ import com.music.bitchord.data.stats.ListeningStats
 import com.music.bitchord.download.Downloads
 import com.music.bitchord.download.PlaylistSync
 // Automatic release update scheduling removed; updates are manual from Settings.
+import com.music.bitchord.update.ReleasePushMessagingService
 import androidx.work.Configuration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -174,6 +175,9 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         // After AppSettings, whose switch decides whether half of it runs.
         ArtistFacts.init(this)
         // Automatic update checks/notifications/popups are disabled; updates are manual from Settings.
+        // Subscribe to FCM release-update topic so published GitHub releases can trigger
+        // push notifications even when the app is closed (requires Firebase config in build).
+        ReleasePushMessagingService.subscribeToReleaseTopic()
         // One cache directory can only be opened once per process, and
         // PlaybackService shares this one — so it's opened here, not there.
         AudioCache.init(this)
