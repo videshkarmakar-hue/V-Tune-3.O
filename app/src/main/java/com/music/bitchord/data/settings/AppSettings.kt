@@ -252,10 +252,10 @@ object AppSettings {
     val syncDownloadedPlaylists = MutableStateFlow(false)
 
     /**
-     * Periodically check GitHub releases in the background and notify when a new update is
-     * available. Optional; FCM push (if configured) provides faster delivery when the app is closed.
+     * Periodically check for new releases in the background and notify when a new update is
+     * available. Enabled by default; push notifications (if configured) provide faster delivery when the app is closed.
      */
-    val backgroundReleaseChecks = MutableStateFlow(false)
+    val backgroundReleaseChecks = MutableStateFlow(true)
 
     /** Whether the active network charges for data. `null` while offline. */
     val meteredConnection = MutableStateFlow<Boolean?>(null)
@@ -978,7 +978,7 @@ object AppSettings {
         wifiOnlyDownloads.value = prefs.getBoolean(KEY_WIFI_ONLY_DOWNLOADS, true)
         exportDownloads.value = prefs.getBoolean(KEY_EXPORT_DOWNLOADS, false)
         syncDownloadedPlaylists.value = prefs.getBoolean(KEY_SYNC_DOWNLOADED_PLAYLISTS, false)
-        backgroundReleaseChecks.value = prefs.getBoolean(KEY_BACKGROUND_RELEASE_CHECKS, false)
+        backgroundReleaseChecks.value = prefs.getBoolean(KEY_BACKGROUND_RELEASE_CHECKS, true)
         crossfadeSeconds.value = prefs.getInt(KEY_CROSSFADE, 0)
         smartFadeEnabled.value = prefs.getBoolean(KEY_SMART_FADE, false)
         automixPerformanceMode.value = runCatching {

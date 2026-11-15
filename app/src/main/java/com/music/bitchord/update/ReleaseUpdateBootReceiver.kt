@@ -5,7 +5,7 @@ import android.content.Context
 import android.content.Intent
 
 /**
- * Reschedules periodic GitHub release checks after boot/app update when background checks are
+ * Reschedules periodic release checks after boot/app update when background checks are
  * enabled by the user. Ensures best-effort notifications continue across restarts (FCM push,
  * when configured, provides faster delivery).
  */

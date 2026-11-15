@@ -10,7 +10,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
- * Receives GitHub release push notifications (FCM topic, e.g. "app-updates") so users can be
+ * Receives release push notifications (FCM topic, e.g. "app-updates") so users can be
  * notified of new published releases even when the app is closed/backgrounded.
  *
  * FCM may display notification-payload messages automatically in background states; this service

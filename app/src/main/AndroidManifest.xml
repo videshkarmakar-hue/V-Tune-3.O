@@ -657,7 +657,7 @@
             android:name=".download.PlaylistSyncApproval"
             android:exported="false" />
 
-        <!-- Periodic GitHub release checks: reschedule/trigger after boot or app update so
+        <!-- Periodic release checks: reschedule/trigger after boot or app update so
              update notifications can be shown even when the app is not running. -->
         <receiver
             android:name=".update.ReleaseUpdateBootReceiver"
@@ -671,7 +671,7 @@
             </intent-filter>
         </receiver>
 
-        <!-- Firebase Cloud Messaging: receives GitHub-release push notifications on the
+        <!-- Firebase Cloud Messaging: receives release push notifications on the
              "app-updates" topic so users can be alerted even when the app is closed. -->
         <service
             android:name=".update.ReleasePushMessagingService"

@@ -98,7 +98,7 @@ android {
             "\"${addonAuthServer.replace("\\", "\\\\").replace("\"", "\\\"")}\"",
         )
 
-        // Mandatory update enforcement. GitHub's latest release is the source
+        // Mandatory update enforcement. The latest published release is the source
         // of truth; the APK prefix tells this app's assets apart from the TV
         // and watch files that share the same release. See AppUpdateManager.
         buildConfigField(

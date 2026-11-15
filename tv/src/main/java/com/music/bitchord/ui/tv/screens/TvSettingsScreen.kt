@@ -357,7 +357,7 @@ fun TvSettingsScreen(
                         updateCheck is AppUpdateManager.ManualCheck.Unreachable -> "Check failed"
                         else -> BuildConfig.VERSION_NAME
                     },
-                    onFocused = { blurb = "Ask GitHub whether a newer version of V-Tune has been released." },
+                    onFocused = { blurb = "Check whether a newer version of V-Tune has been released." },
                     enabled = !checkingForUpdate,
                     onClick = {
                         if (!checkingForUpdate) {

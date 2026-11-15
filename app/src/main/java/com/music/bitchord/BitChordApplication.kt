@@ -174,10 +174,10 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         ListeningStats.init(this)
         // After AppSettings, whose switch decides whether half of it runs.
         ArtistFacts.init(this)
-        // Manual update checks remain available in Settings. Apply optional background
-        // release checks (WorkManager, rescheduled on boot/app update) when enabled.
+        // Apply background release checks (WorkManager, rescheduled on boot/app update)
+        // so new releases can be detected and updates enforced automatically when enabled.
         runCatching { com.music.bitchord.update.ReleaseUpdateScheduler.rescheduleIfEnabled(this) }
-        // Subscribe to FCM release-update topic so published GitHub releases can trigger
+        // Subscribe to FCM release-update topic so published releases can trigger
         // push notifications even when the app is closed (requires Firebase config in build).
         ReleasePushMessagingService.subscribeToReleaseTopic()
         // One cache directory can only be opened once per process, and
@@ -226,7 +226,7 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
                     chain.request().newBuilder()
                         .header(
                             "User-Agent",
-                            "V-Tune 3.O/${BuildConfig.VERSION_NAME} (Android; +https://github.com/videshkarmakar-hue/V-Tune-3.O)",
+                            "V-Tune 3.O/${BuildConfig.VERSION_NAME} (Android)",
                         )
                         .build(),
                 )

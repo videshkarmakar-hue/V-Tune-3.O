@@ -59,7 +59,7 @@ import kotlinx.coroutines.launch
 /**
  * Non-closable, non-skippable mandatory update gate.
  *
- * When a newer GitHub release is detected, the app blocks usage until the update is
+ * When a newer release is detected, the app blocks usage until the update is
  * downloaded and installed. Users cannot dismiss, snooze, or skip this flow.
  */
 @Composable
@@ -119,7 +119,7 @@ fun MandatoryUpdateHost(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // While app is open, keep polling GitHub so newly published releases are detected promptly.
+    // While app is open, keep polling for newly published releases so updates are detected promptly.
     LaunchedEffect(app) {
         while (isActive) {
             delay(60_000L)

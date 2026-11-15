@@ -31,8 +31,8 @@ import java.io.File
 /**
  * The one place the app decides whether it is allowed to run.
  *
- * V-Tune ships sideloaded from GitHub Releases, so a release is the only thing
- * that can announce a newer build. This manager polls that release, keeps the
+ * V-Tune ships sideloaded releases, so a published release is the only thing
+ * that can announce a newer build. This manager polls for the latest release, keeps the
  * result in a process-wide [MutableStateFlow], and owns the entire update round
  * trip — download, install, and the verification that finally lifts the gate.
  *
@@ -61,7 +61,7 @@ object AppUpdateManager {
         /** A release is pending, and the gate is already up over the app. */
         data class Available(val version: String) : ManualCheck
 
-        /** GitHub could not be reached, so the check learned nothing. */
+        /** The release server could not be reached, so the check learned nothing. */
         data object Unreachable : ManualCheck
     }
 
@@ -118,7 +118,7 @@ object AppUpdateManager {
     private var lastCheckFailed = false
     private var releaseEtag: String? = null
 
-    /** How long a failed check waits before trying again; widened when GitHub says so. */
+    /** How long a failed check waits before trying again; widened when the server asks for it. */
     private var failureBackoffMs = FAILURE_RETRY_MS
 
     /** Set only while the user is away on the "install unknown apps" screen. */
@@ -206,7 +206,7 @@ object AppUpdateManager {
                     lastCheckedAt = SystemClock.elapsedRealtime()
                     recordCheckTime(app)
                     lastCheckFailed = true
-                    // GitHub answers an exhausted anonymous quota with 403/429
+                    // The release server may answer an exhausted anonymous quota with 403/429
                     // and says when it will reset. Retrying a minute later would
                     // only spend more of it, so wait the time it asked for.
                     failureBackoffMs = retryDelayMs(response)
@@ -339,7 +339,7 @@ object AppUpdateManager {
     }
 
     /**
-     * How long to leave GitHub alone after a failed check, in milliseconds.
+     * How long to wait before retrying after a failed check, in milliseconds.
      *
      * `Retry-After` carries seconds and `X-RateLimit-Reset` an epoch timestamp;
      * either is clamped to half an hour so a skewed header cannot park the

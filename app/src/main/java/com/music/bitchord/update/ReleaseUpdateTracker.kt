@@ -17,7 +17,7 @@ import com.music.bitchord.R
 import com.music.bitchord.data.AppUpdateManager
 
 /**
- * Tracks GitHub Releases for update availability and shows a system notification when a
+ * Tracks published releases for update availability and shows a system notification when a
  * newer release is detected (including when checked from background work while the app
  * is not in the foreground).
  *
