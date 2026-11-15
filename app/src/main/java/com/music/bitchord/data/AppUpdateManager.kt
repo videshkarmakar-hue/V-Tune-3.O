@@ -88,6 +88,13 @@ object AppUpdateManager {
     private const val UPDATE_PREFS = "vtune_update"
     private const val KEY_PENDING_RELEASE = "pending_release"
     private const val KEY_PENDING_AT = "pending_at"
+    private const val KEY_SNOOZE_UNTIL = "snooze_until"
+    private const val KEY_AUTO_UPDATE_WIFI = "auto_update_wifi"
+    private const val KEY_ALLOW_CELLULAR_DOWNLOAD = "allow_cellular_update_download"
+    private const val KEY_CHECK_FREQUENCY_HOURS = "check_frequency_hours"
+    private const val KEY_LAST_CHECKED_WALL = "last_checked_wall_ms"
+
+    enum class CheckFrequency(val hours: Int) { DAILY(24), WEEKLY(168), MANUAL(0) }
 
     /**
      * A gate restored from disk is only honoured while it is still plausible —
@@ -117,6 +124,17 @@ object AppUpdateManager {
     /** Set only while the user is away on the "install unknown apps" screen. */
     private var awaitingInstallPermission = false
 
+    private val _snoozeUntil = MutableStateFlow(0L)
+    val snoozeUntil = _snoozeUntil.asStateFlow()
+    private val _lastCheckedWallMs = MutableStateFlow(0L)
+    val lastCheckedWallMs = _lastCheckedWallMs.asStateFlow()
+    private val _autoUpdateWifi = MutableStateFlow(true)
+    val autoUpdateWifi = _autoUpdateWifi.asStateFlow()
+    private val _allowCellularDownload = MutableStateFlow(false)
+    val allowCellularDownload = _allowCellularDownload.asStateFlow()
+    private val _checkFrequency = MutableStateFlow(CheckFrequency.DAILY)
+    val checkFrequency = _checkFrequency.asStateFlow()
+
     /** Serialises concurrent checks; see [checkLocked]. */
     private val checkMutex = Mutex()
 
@@ -143,6 +161,7 @@ object AppUpdateManager {
      */
     private suspend fun checkLocked(context: Context, force: Boolean): UpdateInfo? = withContext(Dispatchers.IO) {
         val app = context.applicationContext
+        loadPreferences(app)
         verifyInstalled(app)
         // Killed and relaunched offline, the app is still gated: the last
         // confirmed release is restored before the network is even tried.
@@ -163,6 +182,7 @@ object AppUpdateManager {
             Http.client.newCall(request).execute().use { response ->
                 if (response.code == 304) {
                     lastCheckedAt = SystemClock.elapsedRealtime()
+                    recordCheckTime(app)
                     lastCheckFailed = false
                     failureBackoffMs = FAILURE_RETRY_MS
                     return@withContext _pending.value
@@ -173,6 +193,7 @@ object AppUpdateManager {
                     // install", not a network failure, so it must not read as
                     // one in Settings or be retried every minute.
                     lastCheckedAt = SystemClock.elapsedRealtime()
+                    recordCheckTime(app)
                     lastCheckFailed = false
                     failureBackoffMs = FAILURE_RETRY_MS
                     releaseEtag = null
@@ -183,6 +204,7 @@ object AppUpdateManager {
                 }
                 if (!response.isSuccessful) {
                     lastCheckedAt = SystemClock.elapsedRealtime()
+                    recordCheckTime(app)
                     lastCheckFailed = true
                     // GitHub answers an exhausted anonymous quota with 403/429
                     // and says when it will reset. Retrying a minute later would
@@ -203,6 +225,7 @@ object AppUpdateManager {
 
                 releaseEtag = response.header("ETag") ?: releaseEtag
                 lastCheckedAt = SystemClock.elapsedRealtime()
+                recordCheckTime(app)
                 lastCheckFailed = false
                 failureBackoffMs = FAILURE_RETRY_MS
 
@@ -229,6 +252,7 @@ object AppUpdateManager {
             }
         }.getOrElse {
             lastCheckedAt = SystemClock.elapsedRealtime()
+            recordCheckTime(app)
             lastCheckFailed = true
             _pending.value
         }
@@ -266,7 +290,9 @@ object AppUpdateManager {
         if (isNewer(update.version, installed)) return false
         _pending.value = null
         _download.value = DownloadState.Idle
+        _snoozeUntil.value = 0L
         storePending(context, null)
+        updatePrefs(context).edit().remove(KEY_SNOOZE_UNTIL).apply()
         return true
     }
 
