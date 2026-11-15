@@ -40,6 +40,54 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Determine signing availability
+        id: signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          available=false
+          if [ -n "${KEYSTORE_BASE64:-}" ] && [ -n "${KEYSTORE_PASSWORD:-}" ] && [ -n "${KEY_ALIAS:-}" ] && [ -n "${KEY_PASSWORD:-}" ]; then
+            available=true
+          fi
+          echo "available=$available" >> "$GITHUB_OUTPUT"
+          if [ "$available" = "true" ]; then
+            echo "mode=release-signed" >> "$GITHUB_OUTPUT"
+            echo "Signing secrets detected: will produce signed release-ready APK."
+          else
+            echo "mode=debug-fallback" >> "$GITHUB_OUTPUT"
+            echo "Signing secrets missing: will fall back to debug APK."
+          fi
+
+      - name: Setup signing and local properties (release mode)
+        if: ${{ steps.signing.outputs.available == 'true' }}
+        env:
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+          LISTEN_TOGETHER_SERVER: ${{ secrets.LISTEN_TOGETHER_SERVER }}
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > local.properties
+          [ -n "${LASTFM_API_KEY:-}" ] && echo "LASTFM_API_KEY=$LASTFM_API_KEY" >> local.properties || true
+          [ -n "${LASTFM_SECRET:-}" ] && echo "LASTFM_SECRET=$LASTFM_SECRET" >> local.properties || true
+          [ -n "${LISTEN_TOGETHER_SERVER:-}" ] && echo "LISTEN_TOGETHER_SERVER=$LISTEN_TOGETHER_SERVER" >> local.properties || true
+          echo "$KEYSTORE_BASE64" | base64 -d > bitchord-release.jks
+          {
+            echo "storeFile=bitchord-release.jks"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > keystore.properties
+
       - name: Setup Firebase config (optional, for FCM push)
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
@@ -79,7 +127,19 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           echo "Computed version: ${VERSION_NAME} (${VERSION_CODE}) ${BETA_SUFFIX} tag=${TAG}"
 
-      - name: Build debug APK with unique version
+      - name: Build signed release-ready APK with unique version
+        if: ${{ steps.signing.outputs.available == 'true' }}
+        shell: bash
+        run: |
+          ./gradlew :app:assembleProdRelease \
+            -PbitchordVersionName="${{ steps.version.outputs.version_name }}" \
+            -PbitchordVersionCode="${{ steps.version.outputs.version_code }}" \
+            -PbitchordBetaSuffix="${{ steps.version.outputs.beta_suffix }}" \
+            -x lint --console=plain --stacktrace
+
+      - name: Build debug fallback APK with unique version
+        if: ${{ steps.signing.outputs.available != 'true' }}
+        shell: bash
         run: |
           ./gradlew :app:assembleProdDebug \
             -PbitchordVersionName="${{ steps.version.outputs.version_name }}" \
@@ -90,8 +150,19 @@ jobs:
       - name: Prepare versioned APK bundle (release agent)
         id: agent
         shell: bash
+        env:
+          SIGNING_AVAILABLE: ${{ steps.signing.outputs.available }}
         run: |
           set -euo pipefail
+          mkdir -p dist/auto-apk
+          EXTRA_ARGS=()
+          if [ "${SIGNING_AVAILABLE}" = "true" ]; then
+            # Signed, release-ready artifact: keep validation (signed app APK, versioned names) intact.
+            EXTRA_ARGS+=(--build-types release)
+          else
+            # Fallback only when signing secrets are unavailable.
+            EXTRA_ARGS+=(--build-types debug --allow-unsigned --skip-app-required)
+          fi
           python scripts/release_agent.py \
             --version-name "${{ steps.version.outputs.version_name }}" \
             --version-code "${{ steps.version.outputs.version_code }}" \
@@ -99,9 +170,7 @@ jobs:
             --search-dir app/build/outputs/apk \
             --dist-dir dist/auto-apk \
             --modules app \
-            --build-types debug \
-            --allow-unsigned \
-            --skip-app-required \
+            "${EXTRA_ARGS[@]}" \
             --always-produce-artifacts \
             --allow-dirty \
             --json-report dist/auto-apk/auto-release-report.json
@@ -110,7 +179,7 @@ jobs:
       - name: Upload versioned APK artifact bundle
         uses: actions/upload-artifact@v4
         with:
-          name: v-tune-auto-apk-${{ steps.version.outputs.tag }}-${{ github.run_attempt }}
+          name: v-tune-auto-apk-${{ steps.signing.outputs.mode }}-${{ steps.version.outputs.tag }}-${{ github.run_attempt }}
           path: |
             dist/auto-apk/*.apk
             dist/auto-apk/RELEASE_NOTES.md
@@ -125,10 +194,12 @@ jobs:
           {
             echo "### Auto APK Agent"
             echo ""
+            echo "- Mode: \`${{ steps.signing.outputs.mode }}\`"
             echo "- Version: \`${{ steps.version.outputs.version_name }}\`"
             echo "- Version code: \`${{ steps.version.outputs.version_code }}\`"
             echo "- Suffix: \`${{ steps.version.outputs.beta_suffix }}\`"
             echo "- Tag (generated): \`${{ steps.version.outputs.tag }}\`"
             echo "- Commit: \`${{ github.sha }}\`"
+            echo "- Signed release-ready APK produced when signing secrets available; debug fallback only when missing"
             echo "- Artifacts: versioned APK(s), notes, manifest, and agent report uploaded"
           } >> "$GITHUB_STEP_SUMMARY"

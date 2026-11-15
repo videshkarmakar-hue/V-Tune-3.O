@@ -26,13 +26,14 @@ This repository includes release automation agents and GitHub Actions workflows 
 - `.github/workflows/auto-apk-agent.yml` — **Auto APK Agent (every change)**
   - Triggers on **every push** (all branches), **pull requests**, and **manual dispatch**
   - Computes a unique per-run version (`versionName`, `versionCode`, CI suffix/tag metadata) for that change/run
-  - Builds a versioned **prod debug APK** with Gradle property overrides so every update produces an installable, uniquely versioned APK artifact
-  - Packages assets/notes/manifest/report with `scripts/release_agent.py` in artifact mode and uploads them as a workflow artifact
-  - Designed to produce a versioned APK artifact on every change automatically (subject to CI/build success and runner environment)
+  - **Signed release-ready by default when secrets are available:** with `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD` configured, builds a versioned signed `:app:assembleProdRelease` APK and packages it in release mode (signed/validated app artifact)
+  - **Debug fallback only when signing secrets are missing:** builds a versioned `:app:assembleProdDebug` APK and packages in artifact mode (`--build-types debug --allow-unsigned --skip-app-required`)
+  - Uses `scripts/release_agent.py` with `--always-produce-artifacts` to emit the prepared versioned bundle/report while keeping versioning, validation logic, and publish safeguards intact (no publishing/tag mutation)
+  - Uploads the versioned APK bundle (APK, notes, manifest, report) for that specific update
 
 ## Triggers and automated behavior
 
-- **Every change (push/PR via Auto APK Agent):** builds and packages a uniquely versioned APK artifact bundle for that run/change and uploads it (no publishing).
+- **Every change (push/PR via Auto APK Agent):** builds and packages a uniquely versioned APK artifact bundle for that run/change and uploads it (signed release-ready when signing secrets are available; debug fallback only when missing). No publishing.
 - **Push/PR/tag in Release Automation workflow:** runs detection, validation, and definitive **GO/NO-GO** reporting; uploads prepared release bundle/report for inspection (no publish on push).
 - **Manual dispatch (`workflow_dispatch`) — publish gate:** `release.yml` can build/prep/validate and, when **`publish=true` and the decision is GO**, create/push the tag and publish the GitHub Release. This is the only CI publish path (explicit manual intent required).
 
@@ -132,9 +133,10 @@ Publish is allowed **only** when the decision is **GO** and safety checks pass (
 ## GitHub Actions configuration
 
 ### Auto APK Agent
-- No signing secrets required for the default debug-artifact flow
 - Produces and uploads versioned APK bundle artifacts on every push/PR/run (when build succeeds)
-- For distributable signed release APKs in CI, configure keystore/signing secrets and adapt the build/package steps to `release` build types and signing requirements
+- **Signing secrets available (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`):** produces a signed, release-ready versioned APK (`assembleProdRelease`) packaged via `release_agent.py` with signed/validated app artifact checks
+- **Signing secrets missing:** falls back to a versioned debug APK (`assembleProdDebug`) packaged in debug artifact mode
+- Optional: `LASTFM_API_KEY`, `LASTFM_SECRET`, `LISTEN_TOGETHER_SERVER`, `GOOGLE_SERVICES_JSON` (FCM config)
 
 ### Release publishing
 Repository secrets for signed, publishable APKs and release creation:
@@ -150,7 +152,7 @@ Without signing secrets, release publish decisions will typically be **NO-GO** (
 - **No incomplete/invalid releases:** publish requires valid signed release APKs and required modules/assets.
 - **GO-gated publishing:** publish proceeds only on a definitive **GO** decision and explicit intent.
 - **Auditable outputs:** manifest, release notes, and JSON decision/report are generated for inspection.
-- **Build constraints:** "every change produces an APK" depends on CI/build environment health, dependency availability, and successful Gradle builds; failures are reported in workflow runs. Signed, store/update-channel-ready release APKs additionally require valid signing configuration.
+- **Build constraints:** "every change produces a versioned APK" depends on CI/build environment health, dependency availability, and successful Gradle builds; failures are reported in workflow runs. The Auto APK Agent produces a **signed release-ready APK when signing secrets/keystore are available** and falls back to a debug APK only when they are missing. Signed release publication remains GO-gated and opt-in.
 
 ## Extending
 
