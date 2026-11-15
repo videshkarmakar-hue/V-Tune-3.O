@@ -196,6 +196,8 @@ import com.music.bitchord.playback.LinkRequest
 import com.music.bitchord.playback.MusicLink
 import com.music.bitchord.playback.OriginalVersion
 import com.music.bitchord.playback.PlayerDeepLink
+import com.music.bitchord.data.AppUpdateManager
+import com.music.bitchord.update.ReleaseUpdateTracker
 import com.music.bitchord.playback.QueueBuilder
 import com.music.bitchord.playback.QueueCoordinator
 import com.music.bitchord.playback.QueueCoordinator.asQueueEntry
@@ -399,6 +401,11 @@ class MainActivity : AppCompatActivity() {
         JamInviteLink.consume(intent)
         // Likewise for a link tapped or shared from another app — see [MusicLink].
         MusicLink.consume(intent)
+        if (intent.getBooleanExtra(ReleaseUpdateTracker.EXTRA_OPEN_UPDATE, false)) {
+            // Clear any snooze so the update screen can be presented.
+            AppUpdateManager.snooze(this, durationMs = 0L)
+            AppUpdateManager.loadPreferences(this)
+        }
         setContent {
             val theme by AppSettings.themeMode.collectAsStateWithLifecycle()
             val appFont by AppSettings.appFont.collectAsStateWithLifecycle()
@@ -503,6 +510,10 @@ class MainActivity : AppCompatActivity() {
         // Replaces what getIntent() returns, so the extra this consumes is the
         // one that just arrived and not the one the task was started with.
         setIntent(intent)
+        if (intent.getBooleanExtra(ReleaseUpdateTracker.EXTRA_OPEN_UPDATE, false)) {
+            AppUpdateManager.snooze(this, durationMs = 0L) // clear snooze so update screen can show
+            AppUpdateManager.loadPreferences(this)
+        }
         PlayerDeepLink.consume(intent)
         JamInviteLink.consume(intent)
         MusicLink.consume(intent)
