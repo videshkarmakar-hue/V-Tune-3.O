@@ -1,20 +1,45 @@
 package com.music.bitchord.update
 
 import android.content.Context
+import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.music.bitchord.data.settings.AppSettings
 import java.util.concurrent.TimeUnit
 
 object ReleaseUpdateScheduler {
 
-    // Periodic checks provide best-effort notifications when the app is closed.
-    // (Exact-time delivery on release publish requires an external push service such as FCM.)
-    private const val PERIOD_HOURS = 6L
+    // More responsive best-effort periodic checks (WorkManager/Doze still apply).
+    // Exact-time delivery for published releases is provided by FCM push when configured.
+    private const val PERIOD_HOURS = 4L
+    private const val FLEX_HOURS = 2L
+
+    fun applyBackgroundCheckSetting(context: Context, enabled: Boolean) {
+        if (enabled) {
+            ensureScheduled(context)
+            // Run a catch-up check soon after enabling so the user gets timely feedback.
+            enqueueImmediateCheck(context, expedited = true)
+        } else {
+            cancel(context)
+        }
+    }
+
+    fun rescheduleIfEnabled(context: Context) {
+        val app = context.applicationContext
+        if (AppSettings.backgroundReleaseChecks.value) {
+            ensureScheduled(app)
+            // After boot/app update, try to check promptly once network is available.
+            enqueueImmediateCheck(app, expedited = false)
+        } else {
+            cancel(app)
+        }
+    }
 
     fun ensureScheduled(context: Context) {
         val app = context.applicationContext
@@ -24,8 +49,10 @@ object ReleaseUpdateScheduler {
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-        val periodic = PeriodicWorkRequestBuilder<ReleaseUpdateCheckWorker>(PERIOD_HOURS, TimeUnit.HOURS)
+        val periodic = PeriodicWorkRequestBuilder<ReleaseUpdateCheckWorker>(PERIOD_HOURS, TimeUnit.HOURS, FLEX_HOURS, TimeUnit.HOURS)
             .setConstraints(constraints)
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.MINUTES)
+            .addTag(ReleaseUpdateCheckWorker.TAG_PERIODIC)
             .build()
 
         runCatching {
@@ -37,21 +64,37 @@ object ReleaseUpdateScheduler {
         }
     }
 
-    fun enqueueImmediateCheck(context: Context) {
+    fun enqueueImmediateCheck(context: Context, expedited: Boolean = true) {
         val app = context.applicationContext
         val wm = runCatching { WorkManager.getInstance(app) }.getOrNull() ?: return
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
-        val req = OneTimeWorkRequestBuilder<ReleaseUpdateCheckWorker>()
+
+        val builder = OneTimeWorkRequestBuilder<ReleaseUpdateCheckWorker>()
             .setConstraints(constraints)
-            .build()
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.MINUTES)
+            .addTag(ReleaseUpdateCheckWorker.TAG_ONE_TIME)
+
+        if (expedited) {
+            builder.setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+        }
+
         runCatching {
             wm.enqueueUniqueWork(
                 ReleaseUpdateCheckWorker.UNIQUE_ONE_TIME_WORK,
                 ExistingWorkPolicy.REPLACE,
-                req,
+                builder.build(),
             )
+        }
+    }
+
+    fun cancel(context: Context) {
+        val app = context.applicationContext
+        val wm = runCatching { WorkManager.getInstance(app) }.getOrNull() ?: return
+        runCatching {
+            wm.cancelUniqueWork(ReleaseUpdateCheckWorker.UNIQUE_PERIODIC_WORK)
+            wm.cancelUniqueWork(ReleaseUpdateCheckWorker.UNIQUE_ONE_TIME_WORK)
         }
     }
 }

@@ -175,6 +175,8 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         // After AppSettings, whose switch decides whether half of it runs.
         ArtistFacts.init(this)
         // Automatic update checks/notifications/popups are disabled; updates are manual from Settings.
+        // Apply optional background release checks (WorkManager/boot-rescheduled) if enabled.
+        runCatching { com.music.bitchord.update.ReleaseUpdateScheduler.rescheduleIfEnabled(this) }
         // Subscribe to FCM release-update topic so published GitHub releases can trigger
         // push notifications even when the app is closed (requires Firebase config in build).
         ReleasePushMessagingService.subscribeToReleaseTopic()

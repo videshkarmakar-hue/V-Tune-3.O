@@ -22,7 +22,9 @@ class ReleaseUpdateCheckWorker(
     }
 
     companion object {
-        private const val TAG = "ReleaseUpdateWorker"
+        const val TAG = "ReleaseUpdateWorker"
+        const val TAG_PERIODIC = "release_update_periodic"
+        const val TAG_ONE_TIME = "release_update_one_time"
         const val UNIQUE_PERIODIC_WORK = "release_update_periodic_check"
         const val UNIQUE_ONE_TIME_WORK = "release_update_one_time_check"
     }

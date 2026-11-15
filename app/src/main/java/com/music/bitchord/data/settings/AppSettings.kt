@@ -251,6 +251,12 @@ object AppSettings {
      */
     val syncDownloadedPlaylists = MutableStateFlow(false)
 
+    /**
+     * Periodically check GitHub releases in the background and notify when a new update is
+     * available. Optional; FCM push (if configured) provides faster delivery when the app is closed.
+     */
+    val backgroundReleaseChecks = MutableStateFlow(false)
+
     /** Whether the active network charges for data. `null` while offline. */
     val meteredConnection = MutableStateFlow<Boolean?>(null)
 
@@ -972,6 +978,7 @@ object AppSettings {
         wifiOnlyDownloads.value = prefs.getBoolean(KEY_WIFI_ONLY_DOWNLOADS, true)
         exportDownloads.value = prefs.getBoolean(KEY_EXPORT_DOWNLOADS, false)
         syncDownloadedPlaylists.value = prefs.getBoolean(KEY_SYNC_DOWNLOADED_PLAYLISTS, false)
+        backgroundReleaseChecks.value = prefs.getBoolean(KEY_BACKGROUND_RELEASE_CHECKS, false)
         crossfadeSeconds.value = prefs.getInt(KEY_CROSSFADE, 0)
         smartFadeEnabled.value = prefs.getBoolean(KEY_SMART_FADE, false)
         automixPerformanceMode.value = runCatching {
@@ -1837,6 +1844,12 @@ object AppSettings {
         prefs.edit().putBoolean(KEY_SYNC_DOWNLOADED_PLAYLISTS, value).apply()
     }
 
+    fun setBackgroundReleaseChecks(context: Context, value: Boolean) {
+        backgroundReleaseChecks.value = value
+        prefs.edit().putBoolean(KEY_BACKGROUND_RELEASE_CHECKS, value).apply()
+        com.music.bitchord.update.ReleaseUpdateScheduler.applyBackgroundCheckSetting(context, value)
+    }
+
     fun setLastfmPrimaryArtistOnly(value: Boolean) {
         lastfmPrimaryArtistOnly.value = value
         prefs.edit().putBoolean(KEY_LASTFM_PRIMARY_ARTIST_ONLY, value).apply()
@@ -2255,6 +2268,7 @@ object AppSettings {
     private const val KEY_WIFI_ONLY_DOWNLOADS = "wifi_only_downloads"
     private const val KEY_EXPORT_DOWNLOADS = "export_downloads"
     private const val KEY_SYNC_DOWNLOADED_PLAYLISTS = "sync_downloaded_playlists"
+    private const val KEY_BACKGROUND_RELEASE_CHECKS = "background_release_checks"
     private const val KEY_CROSSFADE = "crossfade_seconds"
     private const val KEY_SMART_FADE = "smart_fade_enabled"
     private const val KEY_AUTOMIX_PERFORMANCE_MODE = "automix_performance_mode"
