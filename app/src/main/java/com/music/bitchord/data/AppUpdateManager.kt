@@ -296,6 +296,48 @@ object AppUpdateManager {
         return true
     }
 
+    fun snooze(context: Context, durationMs: Long = 4L * 60 * 60 * 1000) {
+        val until = if (durationMs <= 0L) 0L else System.currentTimeMillis() + durationMs
+        _snoozeUntil.value = until
+        updatePrefs(context).edit().putLong(KEY_SNOOZE_UNTIL, until).apply()
+    }
+
+    fun isSnoozed(): Boolean = System.currentTimeMillis() < _snoozeUntil.value
+
+    fun loadPreferences(context: Context) {
+        val p = updatePrefs(context)
+        _snoozeUntil.value = p.getLong(KEY_SNOOZE_UNTIL, 0L)
+        _lastCheckedWallMs.value = p.getLong(KEY_LAST_CHECKED_WALL, 0L)
+        _autoUpdateWifi.value = p.getBoolean(KEY_AUTO_UPDATE_WIFI, true)
+        _allowCellularDownload.value = p.getBoolean(KEY_ALLOW_CELLULAR_DOWNLOAD, false)
+        val h = p.getInt(KEY_CHECK_FREQUENCY_HOURS, CheckFrequency.DAILY.hours)
+        _checkFrequency.value = CheckFrequency.entries.firstOrNull { it.hours == h } ?: CheckFrequency.DAILY
+    }
+
+    fun setAutoUpdateWifi(context: Context, enabled: Boolean) {
+        _autoUpdateWifi.value = enabled
+        updatePrefs(context).edit().putBoolean(KEY_AUTO_UPDATE_WIFI, enabled).apply()
+    }
+
+    fun setAllowCellularDownload(context: Context, enabled: Boolean) {
+        _allowCellularDownload.value = enabled
+        updatePrefs(context).edit().putBoolean(KEY_ALLOW_CELLULAR_DOWNLOAD, enabled).apply()
+    }
+
+    fun setCheckFrequency(context: Context, frequency: CheckFrequency) {
+        _checkFrequency.value = frequency
+        updatePrefs(context).edit().putInt(KEY_CHECK_FREQUENCY_HOURS, frequency.hours).apply()
+    }
+
+    private fun updatePrefs(context: Context) =
+        context.applicationContext.getSharedPreferences(UPDATE_PREFS, Context.MODE_PRIVATE)
+
+    private fun recordCheckTime(context: Context) {
+        val now = System.currentTimeMillis()
+        _lastCheckedWallMs.value = now
+        updatePrefs(context).edit().putLong(KEY_LAST_CHECKED_WALL, now).apply()
+    }
+
     /**
      * How long to leave GitHub alone after a failed check, in milliseconds.
      *
