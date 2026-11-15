@@ -111,6 +111,22 @@ jobs:
             echo "keyPassword=$KEY_PASSWORD"
           } > keystore.properties
 
+      - name: Setup Firebase config (optional, for FCM push)
+        if: ${{ steps.signing.outputs.available == 'true' && (github.event_name != 'workflow_dispatch' || inputs.build == 'true') && github.event_name != 'pull_request' }}
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "${GOOGLE_SERVICES_JSON:-}" ]; then
+            if echo "$GOOGLE_SERVICES_JSON" | tr -d '\n\r\t ' | grep -q '^{'; then
+              printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json
+            else
+              echo "$GOOGLE_SERVICES_JSON" | base64 -d > app/google-services.json
+            fi
+            echo "Wrote app/google-services.json for FCM-enabled build."
+          else
+            echo "GOOGLE_SERVICES_JSON not set; building without Firebase/FCM config."
+          fi
+
       - name: Grant execute permission for gradlew
         if: ${{ steps.signing.outputs.available == 'true' && (github.event_name != 'workflow_dispatch' || inputs.build == 'true') && github.event_name != 'pull_request' }}
         run: chmod +x gradlew

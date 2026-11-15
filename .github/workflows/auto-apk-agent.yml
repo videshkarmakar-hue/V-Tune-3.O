@@ -40,6 +40,22 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Setup Firebase config (optional, for FCM push)
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        shell: bash
+        run: |
+          if [ -n "${GOOGLE_SERVICES_JSON:-}" ]; then
+            if echo "$GOOGLE_SERVICES_JSON" | tr -d '\n\r\t ' | grep -q '^{'; then
+              printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json
+            else
+              echo "$GOOGLE_SERVICES_JSON" | base64 -d > app/google-services.json
+            fi
+            echo "Wrote app/google-services.json for FCM-enabled build."
+          else
+            echo "GOOGLE_SERVICES_JSON not set; building without Firebase/FCM config."
+          fi
+
       - name: Compute per-change version
         id: version
         shell: bash
