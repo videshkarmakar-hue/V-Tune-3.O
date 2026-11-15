@@ -1,0 +1,142 @@
+<!DOCTYPE html><html class="h-full bg-black" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport">
+<title>Music Search</title>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Custom Styling for Specific Device Tokens -->
+<style data-purpose="custom-tokens">
+    :root {
+      --bg-black: #000000;
+      --surface-search: #212124;
+      --surface-pill-active: #505054;
+      --surface-pill-bar: #232327;
+      --surface-nav-bar: #161618;
+      --surface-nav-active: #323236;
+      --text-muted: #8E8E93;
+      --text-secondary: #A1A1AA;
+    }
+    
+    body {
+      background-color: var(--bg-black);
+      color: #FFFFFF;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+  </style>
+<style data-purpose="layout-utilities">
+    /* Hide scrollbars across browsers */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="h-full w-full flex items-center justify-center p-0 sm:py-6 overflow-hidden bg-black text-white antialiased" style="background: rgb(14, 15, 20);">
+<!-- Mobile Frame Container -->
+<div class="relative w-full max-w-[428px] h-full sm:h-[920px] bg-black sm:rounded-[48px] overflow-hidden flex flex-col justify-between shadow-2xl border-0 sm:border sm:border-neutral-800" data-purpose="mobile-viewport" style="background: radial-gradient(circle at 50% 0%, rgb(41, 43, 57) 0%, rgb(30, 32, 43) 45%, rgb(19, 20, 27) 75%, rgb(14, 15, 20) 100%); border-color: rgba(142, 154, 195, 0.2);">
+<!-- BEGIN: TopBarSection -->
+<header class="w-full pt-2 px-4 z-20 flex-shrink-0" data-purpose="status-and-search">
+<!-- Native Mobile Status Bar -->
+<div class="w-full flex items-center justify-between text-xs font-medium text-white tracking-tight h-8 px-2 select-none mb-3" data-purpose="system-status-bar">
+<!-- Status Bar Time -->
+<div class="text-[14px] font-semibold tracking-wide pl-1">2:35</div>
+<!-- Status Bar System Indicators -->
+<div class="flex items-center space-x-2 text-[11px] font-normal text-neutral-300">
+<span class="text-[10px] tracking-tight">0.00 <span class="text-[9px]">KB/s</span></span>
+<!-- VoLTE Badge -->
+<div class="flex items-center border border-neutral-400 rounded-[2px] px-0.5 py-0 scale-90 leading-none">
+<span class="text-[8px] font-bold tracking-tighter">VoLTE</span>
+</div>
+<!-- Wi-Fi Icon -->
+<svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+<path d="M12 4C7.31 4 3.07 5.9 0 8.98L12 21 24 8.98A16.88 16.88 0 0 0 12 4zm0 3.25c3.78 0 7.23 1.48 9.8 3.91L12 18.94 2.2 11.16C4.77 8.73 8.22 7.25 12 7.25z"></path>
+</svg>
+<!-- Cellular Network Bars -->
+<div class="flex items-end space-x-0.5 h-2.5">
+<div class="w-0.5 h-1 bg-white rounded-full"></div>
+<div class="w-0.5 h-1.5 bg-white rounded-full"></div>
+<div class="w-0.5 h-2 bg-white rounded-full"></div>
+<div class="w-0.5 h-2.5 bg-white rounded-full"></div>
+</div>
+<!-- Battery Icon & Percentage -->
+<div class="flex items-center space-x-1 pl-0.5">
+<div class="w-5 h-2.5 border border-white/80 rounded-sm p-0.5 flex items-center">
+<div class="h-full w-[79%] bg-white rounded-2xs"></div>
+</div>
+<span class="text-[11px] font-medium">79%</span>
+</div>
+</div>
+</div>
+<!-- Search Bar and Profile Header -->
+<div class="flex items-center gap-2.5 w-full" data-purpose="search-input-group">
+<!-- Main Search Input Pill -->
+<div class="relative flex-1 flex items-center bg-[#212124] h-12 rounded-full px-4 border border-white/5 transition-colors focus-within:ring-1 focus-within:ring-white/20" style="background: rgba(30, 32, 43, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(142, 154, 195, 0.25); box-shadow: rgba(14, 15, 20, 0.5) 0px 4px 20px;">
+<!-- Search Icon -->
+<svg class="w-5 h-5 text-neutral-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color: rgb(155, 164, 192);">
+<circle cx="11" cy="11" r="7"></circle>
+<path d="m20 20-3.5-3.5" stroke-linecap="round"></path>
+</svg>
+<!-- Search Input Box -->
+<input class="bg-transparent border-0 text-white placeholder-[#8E8E93] text-[15px] focus:ring-0 focus:outline-none w-full p-0 tracking-normal" placeholder="Artists, Songs, Lyrics and More" type="text" style="color: rgb(241, 243, 249);">
+</div>
+<!-- User Profile Avatar Button -->
+<button aria-label="Account Profile" class="w-12 h-12 rounded-full bg-[#212124] flex items-center justify-center flex-shrink-0 active:scale-95 transition-transform border border-white/5" type="button" style="background: rgba(30, 32, 43, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(142, 154, 195, 0.25); color: rgb(155, 164, 192); box-shadow: rgba(14, 15, 20, 0.5) 0px 4px 20px;">
+<svg class="w-6 h-6 text-neutral-400" fill="currentColor" viewBox="0 0 24 24">
+<path clip-rule="evenodd" d="M18.685 19.097A9.723 9.723 0 0021.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 003.065 7.097A9.716 9.716 0 0012 21.75a9.716 9.716 0 006.685-2.653zm-12.54-1.285A7.486 7.486 0 0112 15a7.486 7.486 0 015.855 2.812A8.224 8.224 0 0112 20.25a8.224 8.224 0 01-5.855-2.438zM15.75 9a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" fill-rule="evenodd"></path>
+</svg>
+</button>
+</div>
+<!-- Content Filter Chips Segment -->
+<div class="mt-3.5" data-purpose="filter-pills">
+<div class="bg-[#232327] rounded-full p-1 flex items-center justify-between text-sm w-full" style="background: rgba(22, 24, 33, 0.7); border: 1px solid rgba(142, 154, 195, 0.18);"><button class="flex-1 py-1.5 px-4 text-white text-[13.5px] font-medium rounded-full text-center transition shadow-sm" style="background: linear-gradient(135deg, #3B3F54, #292B39); border: 1px solid rgba(142, 154, 195, 0.4); box-shadow: 0px 2px 10px rgba(41, 43, 57, 0.6); color: #FFFFFF;" type="button">YouTube</button><button class="flex-1 py-1.5 px-4 text-[13.5px] font-medium rounded-full text-center transition" style="color: #969EB8;" type="button">Library</button><button class="flex-1 py-1.5 px-4 text-[13.5px] font-medium rounded-full text-center transition" style="color: #969EB8;" type="button">Addons</button></div>
+</div>
+</header>
+<!-- END: TopBarSection -->
+<!-- BEGIN: EmptyPromptArea -->
+<main class="flex-1 flex flex-col items-center justify-start pt-20 px-8 text-center select-none" data-purpose="empty-state-search-prompt">
+<!-- Centered Instructional Label -->
+<p class="text-[#8E8E93] text-[15.5px] font-normal leading-relaxed tracking-tight" style="color: rgb(166, 175, 201); text-shadow: rgba(41, 43, 57, 0.9) 0px 1px 14px;">
+        Search millions of songs on YouTube Music.
+      </p>
+</main>
+<!-- END: EmptyPromptArea -->
+<!-- BEGIN: BottomNavigationContainer -->
+<footer class="w-full pb-3 px-4 flex flex-col items-center" data-purpose="navigation-footer">
+<!-- Floating Navigation Bar -->
+<nav class="w-full bg-[#18181B] rounded-[36px] h-[68px] px-2 flex items-center justify-around shadow-lg border border-white/[0.04]" data-purpose="floating-nav-bar" style="background: rgba(20, 21, 29, 0.92); backdrop-filter: blur(20px); border: 1px solid rgba(142, 154, 195, 0.2); box-shadow: rgba(10, 11, 15, 0.7) 0px 12px 32px, rgba(41, 43, 57, 0.35) 0px 0px 20px;"><!-- Tab: Home -->
+<button class="flex flex-col items-center justify-center flex-1 py-1 transition group" style="color: rgb(127, 135, 163);" type="button">
+  <svg class="w-5 h-5 mb-1 group-active:scale-95 transition-transform" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"></path>
+  </svg>
+  <span class="text-[11px] font-medium tracking-tight">Home</span>
+</button>
+<!-- Tab: Explore -->
+<button class="flex flex-col items-center justify-center flex-1 py-1 transition group" style="color: rgb(127, 135, 163);" type="button">
+  <svg class="w-5 h-5 mb-1 group-active:scale-95 transition-transform" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M4 4h7v7H4zm0 9h7v7H4zm9-9h7v7h-7zm0 9h7v7h-7z"></path>
+  </svg>
+  <span class="text-[11px] font-medium tracking-tight">Explore</span>
+</button>
+<!-- Tab: Library -->
+<button class="flex flex-col items-center justify-center flex-1 py-1 transition group" style="color: rgb(127, 135, 163);" type="button">
+  <svg class="w-5 h-5 mb-1 group-active:scale-95 transition-transform" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"></path>
+  </svg>
+  <span class="text-[11px] font-medium tracking-tight">Library</span>
+</button>
+<!-- Tab: Search (Active Pill Highlight) -->
+<button class="flex items-center justify-center py-2 px-5 rounded-full active:scale-95 transition" style="background: linear-gradient(135deg, rgb(55, 59, 77), rgb(41, 43, 57)); border: 1px solid rgba(142, 154, 195, 0.45); box-shadow: rgba(41, 43, 57, 0.8) 0px 4px 16px, rgba(142, 154, 195, 0.25) 0px 0px 12px; color: rgb(241, 243, 249);" type="button"><svg class="w-5 h-5 mr-1.5" style="color: #C2CBEE;" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5" stroke-linecap="round"></path></svg><span class="text-[12px] font-semibold tracking-tight">Search</span></button></nav>
+<!-- iOS Home Gesture Bar Indicator -->
+<div class="w-full flex justify-center pt-3 pb-1" data-purpose="home-indicator">
+<div class="w-36 h-1 bg-neutral-600 rounded-full opacity-60" style="background: rgb(71, 75, 97); opacity: 0.75;"></div>
+</div>
+</footer>
+<!-- END: BottomNavigationContainer -->
+</div>
+
+</body></html>
