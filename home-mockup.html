@@ -1,0 +1,505 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+<title>YouTube Music</title>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            yt: {
+              black: '#000000',
+              surface: '#0f0f0f',
+              card: '#181818',
+              hover: '#282828',
+              border: '#2a2a2a',
+              muted: '#aaaaaa',
+              subtext: '#909090'
+            }
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+<!-- BEGIN: Custom Styles -->
+<style data-purpose="scrollbar-and-gestures">
+    /* Hide scrollbars for slick native mobile horizontal rails */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .snap-rail {
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+    }
+    .snap-card {
+      scroll-snap-align: start;
+    }
+    /* Smooth tap state */
+    .tap-effect:active {
+      transform: scale(0.97);
+      opacity: 0.9;
+    }
+  </style>
+<style data-purpose="visual-effects">
+    .glass-dock {
+      background: rgba(18, 18, 18, 0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .banner-gradient {
+      background: linear-gradient(135deg, #74092b 0%, #a81242 45%, #e11d48 100%);
+    }
+    .energy-gradient {
+      background: linear-gradient(150deg, #00b33c 0%, #00d647 40%, #029432 100%);
+    }
+    .relax-gradient {
+      background: linear-gradient(150deg, #0284c7 0%, #38bdf8 100%);
+    }
+    .blue-gradient {
+      background: linear-gradient(150deg, #1e3a8a 0%, #3b82f6 100%);
+    }
+  </style>
+<!-- END: Custom Styles -->
+</head>
+<body class="bg-black text-white antialiased selection:bg-rose-500 selection:text-white pb-32 font-sans select-none overflow-x-hidden min-h-screen" style="background: radial-gradient(circle at 50% 0%, rgb(41, 43, 57) 0%, rgb(30, 32, 43) 35%, rgb(21, 22, 32) 70%, rgb(14, 15, 21) 100%); min-height: 100vh; color: rgb(243, 245, 250);">
+<!-- BEGIN: Mobile Container -->
+<div class="max-w-md mx-auto relative bg-black min-h-screen border-x border-neutral-900/40" style="background: transparent; border-color: rgba(142, 154, 195, 0.12);">
+<!-- BEGIN: System StatusBar -->
+
+<!-- END: System StatusBar -->
+<!-- BEGIN: App Header -->
+<div class="px-4 py-3 flex items-center justify-between" data-purpose="app-header">
+<!-- YouTube Music Emblem Logo -->
+<div class="flex items-center space-x-2">
+<div class="relative w-8 h-8 flex items-center justify-center">
+<img src="https://cdn.phototourl.com/member/2026-11-14-f6ac248e-8e37-4948-b229-0db4cfaaf495.png" alt="Logo" class="w-8 h-8 rounded-full object-contain">
+</div>
+</div>
+<!-- Account Profile Circle -->
+<button aria-label="Settings" class="w-8 h-8 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center text-neutral-300 hover:text-white tap-effect" style="background: rgba(41, 43, 57, 0.65); border: 1px solid rgba(142, 154, 195, 0.25); color: rgb(197, 203, 221);"><svg class="w-5 h-5 text-white/90" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></button>
+</div>
+<!-- END: App Header -->
+<main class="space-y-7">
+<!-- BEGIN: Sign-in CTA Banner -->
+<section class="px-4" data-purpose="sign-in-banner"><div class="relative overflow-hidden rounded-2xl p-5 shadow-2xl backdrop-blur-sm min-h-[148px] flex flex-col justify-between" style="background: linear-gradient(135deg, rgba(53, 57, 77, 0.9) 0%, rgba(36, 38, 54, 0.95) 100%); border: 1px solid rgba(142, 154, 195, 0.25); box-shadow: rgba(14, 15, 21, 0.7) 0px 10px 30px -5px;">
+  <div class="absolute -top-16 -right-16 w-44 h-44 rounded-full blur-2xl pointer-events-none" style="background: rgba(142, 154, 195, 0.15);"></div>
+  <div class="absolute -bottom-16 -left-16 w-36 h-36 rounded-full blur-2xl pointer-events-none" style="background: rgba(41, 43, 57, 0.35);"></div>
+  <div class="relative z-10 flex items-center justify-between">
+    <div class="space-y-1">
+      <h2 class="text-xl font-bold tracking-tight leading-tight drop-shadow-sm" style="color: #F3F5FA;">Sign in to YouTube Music</h2>
+      <p class="text-xs font-normal" style="color: #9EA7C4;">Sync your playlists, likes, and recommendations</p>
+    </div>
+    <div class="flex items-end space-x-1 h-5 px-2 py-1 rounded-full flex-shrink-0 ml-3" style="background: rgba(41, 43, 57, 0.7); border: 1px solid rgba(142, 154, 195, 0.2);">
+      <span class="w-1 rounded-full h-3" style="background: #9EA7C4;"></span>
+      <span class="w-1 rounded-full h-4" style="background: #F3F5FA;"></span>
+      <span class="w-1 rounded-full h-2" style="background: #7F88A5;"></span>
+      <span class="w-1 rounded-full h-3.5" style="background: #C4CBDF;"></span>
+    </div>
+  </div>
+  <div class="mt-4 relative z-10 flex items-center justify-center">
+    <button class="inline-flex items-center space-x-3 px-5 py-2.5 rounded-full font-semibold text-sm shadow-md active:scale-95 transition-all duration-200 group" style="background: linear-gradient(180deg, #FFFFFF 0%, #E6E9F3 100%); color: #1E202B; border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);">
+      <svg class="w-4 h-4 transition-transform duration-200 group-hover:scale-110 flex-shrink-0" viewBox="0 0 24 24">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"></path>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"></path>
+      </svg>
+      <span class="tracking-tight font-medium">Sign in with Google</span>
+    </button>
+  </div>
+</div></section>
+<!-- END: Sign-in CTA Banner -->
+<!-- BEGIN: Top Picks for You (Energy Hero Card) -->
+<section class="px-4" data-purpose="top-picks-hero">
+<h3 class="text-xl font-bold tracking-tight text-white mb-3">Top Picks for You</h3>
+<div class="energy-gradient rounded-3xl p-6 relative overflow-hidden aspect-[4/3] flex flex-col justify-between shadow-lg" style="border: 1px solid rgba(142, 154, 195, 0.28); box-shadow: rgba(14, 15, 21, 0.6) 0px 12px 32px;">
+<!-- Top Tag & Spotify/YT Music Wave Mark -->
+<div class="flex items-center justify-end">
+<svg class="w-6 h-6 text-white/90" fill="currentColor" viewBox="0 0 24 24">
+<path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"></path>
+</svg>
+</div>
+<!-- Lightning Bolt Vector Illustration -->
+<div class="flex items-center justify-center my-auto">
+<svg class="w-36 h-36 text-white stroke-[3] stroke-white fill-none drop-shadow-md" viewBox="0 0 24 24">
+<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+</svg>
+</div>
+<!-- Bottom Card Content -->
+<div class="z-10">
+<span class="text-xs uppercase font-semibold text-white/80 tracking-wider" style="color: rgb(197, 203, 221);">Mood for You</span>
+<h4 class="text-2xl font-black text-white leading-tight">Energy</h4>
+<p class="text-xs text-white/90 mt-0.5 font-medium leading-relaxed">High-voltage tracks to keep you moving.</p>
+</div>
+</div>
+</section>
+<!-- END: Top Picks for You -->
+<!-- BEGIN: Albums & Singles Carousel -->
+<section class="space-y-3" data-purpose="albums-singles">
+<div class="px-4 flex items-center justify-between">
+<h3 class="text-xl font-bold tracking-tight text-white">Albums &amp; singles</h3>
+</div>
+<div class="flex space-x-3.5 overflow-x-auto no-scrollbar snap-rail px-4">
+<!-- Item 1 -->
+<div class="snap-card w-40 flex-shrink-0 tap-effect">
+<div class="w-40 h-40 rounded-xl overflow-hidden bg-neutral-800 shadow-md relative group">
+<img alt="Album Cover" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCK1DEQPOCfXQzqIzjiW4AGu30LAyEzN_lQsholTxCsVi-DeMFZ3myHrzvUsoeAoLNSaUE5K4qzLkE4Vzp-cbHSfmmSSTmIwqCu5PxxN9bq0L0IzKIVFVPAzsmTlTE4Hwgecrp0t_4JX5GpKeQKCPryS2VYI4OqORYCoIX1i5abrgcgKOP98_F_MqvY1Lci5LVce_YNhjwWI-mPH2oUs6jG8E4qfcqH2ZT2mX_0XfE">
+<div class="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<svg class="w-4 h-4 fill-white" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+</div>
+</div>
+<div class="mt-2 text-left">
+<p class="text-xs text-yt-muted truncate">Album • Urvashi</p>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="snap-card w-40 flex-shrink-0 tap-effect">
+<div class="w-40 h-40 rounded-xl overflow-hidden bg-neutral-800 shadow-md relative group">
+<img alt="Album Cover" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBP2S0ngf8PcPagE-ZQq_SAF7XmxS_F_-wtUBvPTgahqY6fntNa_4z0UoGNCkFq38mIBzD8R-TOn9IcoolL4K0YvWmwt3DASibwZb3qx8aZhaEGkVsxcx_H8gpuEASSRUVLU1F1BYTRz220aNz1Qv-1He9HQXfR8ZBXQ9BmD7RD3oYwOeYUVjLeXz4BZXrNN-7kEqdQWTT2sQW2NVr_MGlBjqtkUFoGp9_WhkVKN6E">
+</div>
+<div class="mt-2 text-left">
+<p class="text-xs text-yt-muted truncate">Album • Ranjan Echo</p>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="snap-card w-40 flex-shrink-0 tap-effect">
+<div class="w-40 h-40 rounded-xl overflow-hidden bg-neutral-800 shadow-md relative group">
+<img alt="Album Cover" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDAMIfaKmT8522mYd5wpeYjD2d-iFLG7fJld7m2URL7prNDztgV42OmzuwMC7C-XzChIoeSjOWHpL2QYmmJuMTG9kgHM230-el876dSf6s38FdKkiVblaLrHw99P4-ws-hmbD30DK2WCK1Daj3ZjfZjDFUxisFO7ksaGgDsK9aPVGmMM9xoH5YqqiPg52cicNzkeNVaFULoMzUuwBKKksbGKvkVeZm7jWSbgA6p6Zg">
+</div>
+<div class="mt-2 text-left">
+<p class="text-xs text-yt-muted truncate">Single • Raman</p>
+</div>
+</div>
+</div>
+</section>
+<!-- END: Albums & Singles Carousel -->
+<!-- BEGIN: Find Your Mood -->
+<section class="space-y-3" data-purpose="find-your-mood">
+<div class="px-4 flex items-center justify-between">
+<h3 class="text-xl font-bold tracking-tight text-white">Find Your Mood</h3>
+<button class="text-xs font-semibold text-neutral-400 hover:text-white px-2 py-1 rounded-full border border-neutral-700/60" style="color: rgb(158, 167, 196); border: 1px solid rgba(142, 154, 195, 0.25); background: rgba(41, 43, 57, 0.4);">Show all</button>
+</div>
+<div class="flex space-x-3 overflow-x-auto no-scrollbar snap-rail px-4">
+<!-- Energy Mood Card -->
+<div class="snap-card flex-shrink-0 w-36">
+<div class="energy-gradient rounded-2xl p-4 h-36 flex flex-col justify-between shadow-md relative">
+<div class="flex justify-end">
+<svg class="w-4 h-4 text-white/70" fill="currentColor" viewBox="0 0 24 24">
+<path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"></path>
+</svg>
+</div>
+<div class="flex items-center justify-center">
+<svg class="w-14 h-14 text-white stroke-[2.5] stroke-white fill-none" viewBox="0 0 24 24">
+<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+</svg>
+</div>
+<div></div>
+</div>
+<p class="text-sm font-semibold text-white mt-2">Energy</p>
+</div>
+<!-- Relax Mood Card -->
+<div class="snap-card flex-shrink-0 w-36">
+<div class="relax-gradient rounded-2xl p-4 h-36 flex flex-col justify-between shadow-md relative">
+<div class="flex justify-end">
+<svg class="w-4 h-4 text-white/70" fill="currentColor" viewBox="0 0 24 24">
+<path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"></path>
+</svg>
+</div>
+<!-- Stacked Zen Stones SVG -->
+<div class="flex items-center justify-center">
+<svg class="w-14 h-14 text-white stroke-[2] stroke-white fill-none" viewBox="0 0 24 24">
+<ellipse cx="12" cy="7" rx="4" ry="2"></ellipse>
+<ellipse cx="12" cy="12" rx="6" ry="2.5"></ellipse>
+<ellipse cx="12" cy="18" rx="8" ry="3"></ellipse>
+</svg>
+</div>
+<div></div>
+</div>
+<p class="text-sm font-semibold text-white mt-2">Relax</p>
+</div>
+<!-- Feeling Blue Mood Card -->
+<div class="snap-card flex-shrink-0 w-36">
+<div class="blue-gradient rounded-2xl p-4 h-36 flex flex-col justify-between shadow-md relative">
+<div class="flex justify-end">
+<svg class="w-4 h-4 text-white/70" fill="currentColor" viewBox="0 0 24 24">
+<path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"></path>
+</svg>
+</div>
+<!-- Ripple / Spiral waves -->
+<div class="flex items-center justify-center">
+<svg class="w-14 h-14 text-white stroke-[2] stroke-white fill-none" viewBox="0 0 24 24">
+<path d="M3 12h18M5 16h14M7 20h10M5 8h14M7 4h10"></path>
+</svg>
+</div>
+<div></div>
+</div>
+<p class="text-sm font-semibold text-white mt-2 truncate">Feeling Blue</p>
+</div>
+</div>
+</section>
+<!-- END: Find Your Mood -->
+<!-- BEGIN: Music Videos Section -->
+<section class="space-y-3" data-purpose="music-videos">
+<div class="px-4">
+<h3 class="text-xl font-bold tracking-tight text-white">Music videos</h3>
+</div>
+<div class="flex space-x-3.5 overflow-x-auto no-scrollbar snap-rail px-4">
+<!-- Video Card 1 -->
+<div class="snap-card w-64 flex-shrink-0 tap-effect">
+<div class="w-64 aspect-video rounded-xl overflow-hidden bg-neutral-800 shadow-md relative">
+<img alt="Teri Adaa Video Thumbnail" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDhCkUUI_820_1crgylVUdcHMOz4qahSPeeJVSxw_-UdYn56jWHAk9qF3Ev8HXTMeMM8qHDVN58FmMqT3uMKMqMognPCM5rbnltGNtfkB4BdycVmsKX8_U2ufhX-tBY0NR0gJ29UoVE5JYYLIjz19dF-HhECZ90vIMwm0qxTtEyKyBVQsxC5ZaiEIWJqRdZfd7QJu7WJtKO8KdvAvHcAtZlhfmMw4INxV5buuvycdw">
+<div class="absolute bottom-2 right-2 bg-black/80 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium">3:42</div>
+</div>
+<div class="mt-2 text-left">
+<p class="text-sm font-semibold text-white leading-snug truncate">Teri Adaa (Sar-e-Shaam - Me...</p>
+<p class="text-xs text-yt-subtext truncate mt-0.5">Papon • 1.6M views</p>
+</div>
+</div>
+<!-- Video Card 2 -->
+<div class="snap-card w-64 flex-shrink-0 tap-effect">
+<div class="w-64 aspect-video rounded-xl overflow-hidden bg-neutral-800 shadow-md relative">
+<img alt="Ishq Tamasha Video Thumbnail" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDS5P_j38cBFf2rR8fR2eTRT7TTadh9N7ItZGncVI8M9pS0oMDxTOgIiitGUi0SK7C1eqsagNDCiPmcObXBWLWBJCsiZs6t1-3Su0pdpYwJyswnKYjJpO7PvV332lRfobcaFw510fGgZ-6pUHgmMmyRPsxIEQ_-itFMjBxr1YE2ML3i8y8lDYc9Sx3A6I-tkqkkuHIHGYEigiQhJgMuA9TL48RqgTX7W1ySvg5Bp_U">
+<div class="absolute bottom-2 right-2 bg-black/80 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium">4:15</div>
+</div>
+<div class="mt-2 text-left">
+<p class="text-sm font-semibold text-white leading-snug truncate">Ishq Tamasha</p>
+<p class="text-xs text-yt-subtext truncate mt-0.5">Adnan Sami • 3.5M views</p>
+</div>
+</div>
+</div>
+</section>
+<!-- END: Music Videos Section -->
+<!-- BEGIN: India's Biggest Hits Section -->
+<section class="space-y-3" data-purpose="indias-biggest-hits">
+<div class="px-4">
+<p class="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">MUSIC THAT'S HOT AND HAPPENING!</p>
+<h3 class="text-xl font-bold tracking-tight text-white leading-tight">India's biggest hits</h3>
+</div>
+<div class="flex space-x-3.5 overflow-x-auto no-scrollbar snap-rail px-4">
+<!-- Hit 1 -->
+<div class="snap-card w-36 flex-shrink-0 tap-effect">
+<div class="w-36 h-36 rounded-xl overflow-hidden bg-neutral-800 shadow-md relative">
+<img alt="Hits of 2026" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDW3ycheiM_sUvc4rhSt94ajhE8_-172oRtdaEupAFtcu8v1lgTfwjgfOd09nT1xYNTRQ-JvkqD2QSOIPfX2cvFJt_L_YceJv0RY1evgRMKqUMWkB6ZsRoO2xnuZpYDrileHWkHBlP16ZIoQgqt0F0V8vH4mS1GwUDHsr1wVXzl1_8NIYaM-ZdcxnEHWYmQD1sYsKeceJNTrDTsbWCrlCyh8LR_5tI_Rj8PWAB_L7g">
+</div>
+<div class="mt-2">
+<p class="text-sm font-semibold text-white truncate">Hits of 2026 (So far)</p>
+<p class="text-xs text-yt-subtext truncate">Shashwat Sachdev, Arijit...</p>
+</div>
+</div>
+<!-- Hit 2 -->
+<div class="snap-card w-36 flex-shrink-0 tap-effect">
+<div class="w-36 h-36 rounded-xl overflow-hidden bg-neutral-800 shadow-md relative">
+<img alt="Uncut Bollywood" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBtZPA66lazNkGBIiilONumqeVKvW9rFyTOY1BCVX_WEl7yyuSo3fK4H-Y0kIlsckC2MDRaiehyLrJAx5x83dl0hyHs65Nj3OQkQc27tYMLMR2p90gjsmaMkohNrQP0LKRE4SNab7GN-dlCLOXDtxT0P-6Et5wqYRDhye6sQZiiDUhXJMNkKIbj-yxPxl3kV6wY_Gye38w9k-kgkYyTon5cpShv_Leqh1YPgejNoQM">
+</div>
+<div class="mt-2">
+<p class="text-sm font-semibold text-white truncate">Uncut Bollywood</p>
+<p class="text-xs text-yt-subtext truncate">Arijit Singh, Pritam, Vishal...</p>
+</div>
+</div>
+<!-- Hit 3 -->
+<div class="snap-card w-36 flex-shrink-0 tap-effect">
+<div class="w-36 h-36 rounded-xl overflow-hidden bg-neutral-800 shadow-md relative">
+<img alt="Bollywood" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDLbhq_bOJRf9WFWF4gW50D9pVpcnaoOpYSqv47hOZjFuX7gpGjaQQTkOJBdf6otHqxQxcM2_ejehAto0JxGp4ml-bM8vaQJQXURDMNBSg6UT-UkgEBWKeicRZ0ujvcq_g_WKa2E80iqUcgj2eBRLBhkJG34oag5yevPITAyXDlCxr_w48Pzxlb0aNR2hlOlN7PBZUdho0oJhOjp6RgyRLSuxCW5aKQi3TnOOQlhrg">
+</div>
+<div class="mt-2">
+<p class="text-sm font-semibold text-white truncate">Bollywood Swag</p>
+<p class="text-xs text-yt-subtext truncate">Shashwat, Badshah...</p>
+</div>
+</div>
+</div>
+</section>
+<!-- END: India's Biggest Hits Section -->
+<!-- BEGIN: Quick Picks Vertical List -->
+<section class="space-y-3 px-4" data-purpose="quick-picks">
+<div>
+<h3 class="text-xl font-bold tracking-tight text-white">Quick picks</h3>
+</div>
+<div class="space-y-2">
+<!-- Row 1 -->
+<div class="flex items-center justify-between p-1.5 rounded-xl hover:bg-white/5 active:bg-white/10 transition">
+<div class="flex items-center space-x-3 overflow-hidden">
+<img alt="Treat You Better" class="w-12 h-12 rounded-lg object-cover flex-shrink-0" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbsjiEVO4NjhkDkCww4xFwEvQ-ocTaAiTHBD0sUpb_jFuAJHylsdl5x0kBmHmKZ3XmREUCYoG_lprmIWrrAegDQdz3fxBA81BOxc3sEu9eDNptURN1KX8hoCK3zwHKqbP5mDYhmLPdf6CbLZvf1VMTTjVfGZobLyd4wXUxoILZNf44r63DU9zf8djmXGBX9pspqCr88JZ6VqsNpuXh2zjB3bbQks6mrlSJ28Lvr40">
+<div class="overflow-hidden">
+<p class="text-sm font-semibold text-white truncate">Treat You Better</p>
+<p class="text-xs text-yt-subtext truncate mt-0.5">Shawn Mendes</p>
+</div>
+</div>
+<button aria-label="More options" class="p-2 text-neutral-400 hover:text-white">
+<svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+<circle cx="12" cy="5" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="12" cy="19" r="1.5"></circle>
+</svg>
+</button>
+</div>
+<!-- Row 2 -->
+<div class="flex items-center justify-between p-1.5 rounded-xl hover:bg-white/5 active:bg-white/10 transition">
+<div class="flex items-center space-x-3 overflow-hidden">
+<img alt="Choosin' Texas" class="w-12 h-12 rounded-lg object-cover flex-shrink-0" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDgPPam97xSqF_cSwa00bFI-Rk31WMEv-ExTmivRFL0wNEx-cB_vqNw5V3Hc3Yd53DXdA4VbMmPIC3qjfYVkKhv0jxNL2kmxlWD4gpzkTF8i4fJBHerE2bqrehuVrYXllSG9R5uP79-GHvPRvnlEagZDjXbDwIwoa-oJ_SyYsRgjg_TzdQ0TmQqLs4XCuTpS4FzHb_2uY3VRpaUvvkVO8NKsAEQT18yo-rHSItnVUg">
+<div class="overflow-hidden">
+<p class="text-sm font-semibold text-white truncate">Choosin' Texas</p>
+<p class="text-xs text-yt-subtext truncate mt-0.5">Ella Langley</p>
+</div>
+</div>
+<button aria-label="More options" class="p-2 text-neutral-400 hover:text-white">
+<svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+<circle cx="12" cy="5" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="12" cy="19" r="1.5"></circle>
+</svg>
+</button>
+</div>
+<!-- Row 3 -->
+<div class="flex items-center justify-between p-1.5 rounded-xl hover:bg-white/5 active:bg-white/10 transition">
+<div class="flex items-center space-x-3 overflow-hidden">
+<img alt="a thousand years" class="w-12 h-12 rounded-lg object-cover flex-shrink-0" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA9bFMxtdX1qk-zSSu9WKi_doAv-z1UnVBfyL2-hIJcDgH7x6hWaUXusOH_I-SIUqYMhqfSOHwN4dID5cdlHM4VNCSCO7o2dGo14eX6ecdcQ5YKI034N9kNq_MiW-KgCmFQHBNsfrCODtvLqBOmVPE50AHJjW7vgAKE38dhFTy2yrNVegwju2cbXGswbkqKmtFcuLOdGgdwhzOE7DHC94UjZT2JoPQXUaH92FXvs-E">
+<div class="overflow-hidden">
+<p class="text-sm font-semibold text-white truncate">a thousand years</p>
+<p class="text-xs text-yt-subtext truncate mt-0.5">Christina Perri</p>
+</div>
+</div>
+<button aria-label="More options" class="p-2 text-neutral-400 hover:text-white">
+<svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+<circle cx="12" cy="5" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="12" cy="19" r="1.5"></circle>
+</svg>
+</button>
+</div>
+<!-- Row 4 -->
+<div class="flex items-center justify-between p-1.5 rounded-xl hover:bg-white/5 active:bg-white/10 transition">
+<div class="flex items-center space-x-3 overflow-hidden">
+<img alt="Beat It" class="w-12 h-12 rounded-lg object-cover flex-shrink-0" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBeI2PALYgQA49CAePBQUZNRn24pQKZ91QOqvjTZPb_lweeDKKSlLLju-B_3LkZad4GeAFeUW6IgtMoIcM4gCL2DT0d6OI_KARYhiVANNyGCZCf3ZOjxb5iQlYvWN8ZgiYf9yfFPlmJSwkibkYqhvYxSaCuPJ3u0gPaMNcBihPpGnu9PFeeQkD_eLJD-HMTpAO4jIT4Fpr9u9IIEUqzcedG4wXHUuaac4YRTr6uMRE">
+<div class="overflow-hidden">
+<p class="text-sm font-semibold text-white truncate">Beat It</p>
+<p class="text-xs text-yt-subtext truncate mt-0.5">Michael Jackson</p>
+</div>
+</div>
+<button aria-label="More options" class="p-2 text-neutral-400 hover:text-white">
+<svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+<circle cx="12" cy="5" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="12" cy="19" r="1.5"></circle>
+</svg>
+</button>
+</div>
+</div>
+</section>
+<!-- END: Quick Picks Vertical List -->
+<!-- BEGIN: New Albums & Singles -->
+<section class="space-y-3" data-purpose="new-albums-and-singles">
+<div class="px-4">
+<h3 class="text-xl font-bold tracking-tight text-white">New albums &amp; singles</h3>
+</div>
+<div class="flex space-x-3.5 overflow-x-auto no-scrollbar snap-rail px-4">
+<!-- Album 1 -->
+<div class="snap-card w-36 flex-shrink-0 tap-effect">
+<div class="w-36 h-36 rounded-xl overflow-hidden bg-neutral-800 shadow-md">
+<img alt="Jailer 2" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjIuKHN3Eim4_FzRddgsI-hhR70IiLpQ3JomrcuCnXIc3wYQwfwBFhJOIRIhAug5CbFQRdNmdStELoE_lMdfNLDjvL8Lk8jaz7dLwYJxVexEZuae8arWLlnF65zgPHfOW21VHGle940-qKDUrMS3abwXOx2lzln43MtjqQZKMLoKdZEELvfAWveN6qTMNe6JSUIOHzU8NMkybDjek822uZjqSjLCtGD1vlF5fm3Rw">
+</div>
+<div class="mt-2 text-left">
+<p class="text-sm font-semibold text-white truncate">Jailer 2 (Original ...</p>
+<p class="text-xs text-yt-subtext truncate">Album • Anirudh Rav...</p>
+</div>
+</div>
+<!-- Album 2 -->
+<div class="snap-card w-36 flex-shrink-0 tap-effect">
+<div class="w-36 h-36 rounded-xl overflow-hidden bg-neutral-800 shadow-md">
+<img alt="A Beautiful Journey" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD026y_-N3YTGyB6HsXTS6rAj_lzSJdz_26N_Di0ITf80H0hfo3JBx8fOXkXeIgIvLMSvKrVmdke5o9DESB1Q_HrX6kTqf5KZvtPl_7XHwiJZc9-4qS1NTsoKlVaCeiLIhss5r2kBIXyBtU5dvdpSm8mFzfc_iCqN-bftQn9VlxtIpJKlDxzU403R15o1omsPcNZot2ckWWFCmbOanAs1tu79RNmU5SiwvVDLFDaoU">
+</div>
+<div class="mt-2 text-left">
+<p class="text-sm font-semibold text-white truncate">A Beautiful Journ...</p>
+<p class="text-xs text-yt-subtext truncate">Album • RERN</p>
+</div>
+</div>
+<!-- Album 3 -->
+<div class="snap-card w-36 flex-shrink-0 tap-effect">
+<div class="w-36 h-36 rounded-xl overflow-hidden bg-neutral-800 shadow-md">
+<img alt="Naadham" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDsXwWClqIt08hfr2Bk69w5fBRd_FdqsRKTAcFS5IVnDzKtmhdPrDXdv49HWUOoxeKrjzcbVG5CTvoo5E3MQwmvn9QijKORVPIYWwBPQmgp1QQy1E3vprWb9HNmW-AhKJuj38IiLAyYSDndxOYzdEdAWvHlvq0IOHLUMHROoq6DnruhbrDmNvjUW-cwpO5_SCv6PmQ7FdN0zkYy6vrMkoPQ5Hp8awahivti43WgaxA">
+</div>
+<div class="mt-2 text-left">
+<p class="text-sm font-semibold text-white truncate">Naadham</p>
+<p class="text-xs text-yt-subtext truncate">Album • Swarathma</p>
+</div>
+</div>
+</div>
+</section>
+<!-- END: New Albums & Singles -->
+<!-- BEGIN: Trending Section -->
+<section class="space-y-3 px-4" data-purpose="trending-section">
+<div>
+<h3 class="text-xl font-bold tracking-tight text-white">Trending</h3>
+</div>
+<div class="space-y-2.5">
+<!-- Trending 1 -->
+<div class="flex items-center justify-between p-1.5 rounded-xl hover:bg-white/5">
+<div class="flex items-center space-x-3 overflow-hidden">
+<img alt="Vetri Maaran" class="w-12 h-12 rounded-lg object-cover flex-shrink-0" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCu1XgACgS3Dsd-MIz6Zi95EDDbCfd_Q4vdauf17WqLorIlt8c0mObAcRCwvYOmh4jJb7SzkM0wE4YLJtwTTdhRj4jNuK8FKBDM3s051MtIJKppO4mLxnoh-tt17P2X5lWiSTlUjb7Q2iZ2n4t_J_5VW6RycH3F5wIy4T6WKlyfBW2NNOK9BRRa6ANpLKXuz22TORpQPDvHZ6ftmPFxzmh-ErmQUrA4iS8KOtKPOO0">
+<div class="overflow-hidden">
+<p class="text-sm font-semibold text-white truncate">Vetri Maaran's Arasan 'FIRE' Gl...</p>
+<p class="text-xs text-yt-subtext truncate mt-0.5">Kalaipuli S Thanu</p>
+</div>
+</div>
+<button aria-label="More" class="p-2 text-neutral-400">
+<svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="12" cy="19" r="1.5"></circle></svg>
+</button>
+</div>
+<!-- Trending 2 -->
+<div class="flex items-center justify-between p-1.5 rounded-xl hover:bg-white/5">
+<div class="flex items-center space-x-3 overflow-hidden">
+<img alt="Tu Mil Jaaye" class="w-12 h-12 rounded-lg object-cover flex-shrink-0" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDEmxDd2erDwAeTV5_fX93BzjfLQ-7ttQjwCwVyG3nZAtnyBN7luWdb9F6kEHirtYXobuUtMuhk2fdRX99alNKQdYCb-P-XPQiJjnKj0FCelMoGYVpWYBsiqzs83B9rqzQArK_STgvFui4r0Mv0xjTQ0jhVqah6EtqiiW2KFom465OWSVeYqGaU-3E79-sQZj6lOa1IxR1gqBhIMA9ivF9vPObwZvi5cuH6IqEImKs">
+<div class="overflow-hidden">
+<p class="text-sm font-semibold text-white truncate">Tu Mil Jaaye (From "KING")</p>
+<p class="text-xs text-yt-subtext truncate mt-0.5">Ed Sheeran, Kumaar, Arijit Singh...</p>
+</div>
+</div>
+<button aria-label="More" class="p-2 text-neutral-400">
+<svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="12" cy="19" r="1.5"></circle></svg>
+</button>
+</div>
+</div>
+</section>
+<!-- END: Trending Section -->
+</main>
+<!-- BEGIN: Floating Translucent Pill Bottom Navigation -->
+<nav class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm z-50" data-purpose="floating-nav"><div class="glass-dock rounded-full px-5 py-2.5 flex items-center justify-between shadow-[0_10px_35px_rgba(0,0,0,0.8)] border" style="background: rgba(18, 19, 27, 0.92); border-color: rgba(142, 154, 195, 0.2); box-shadow: rgba(0, 0, 0, 0.6) 0px 10px 30px;">
+  <!-- Home Button (Active) -->
+  <button aria-label="Home" class="flex flex-col items-center group focus:outline-none">
+    <div class="px-3.5 py-1 rounded-full flex flex-col items-center" style="background: linear-gradient(135deg, #373B4D 0%, #292B39 100%); border: 1px solid rgba(142, 154, 195, 0.35); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);">
+      <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24" style="color: #F3F5FA;">
+        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"></path>
+      </svg>
+      <span class="text-[10px] font-semibold mt-0.5" style="color: #F3F5FA;">Home</span>
+    </div>
+  </button>
+  <!-- Explore Button -->
+  <button aria-label="Explore" class="flex flex-col items-center px-2 py-1 rounded-full transition focus:outline-none" style="color: #7F87A3;">
+    <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+      <path d="M4 4h7v7H4zm0 9h7v7H4zm9-9h7v7h-7zm0 9h7v7h-7z"></path>
+    </svg>
+    <span class="text-[10px] font-medium mt-0.5">Explore</span>
+  </button>
+  <!-- Library Button -->
+  <button aria-label="Library" class="flex flex-col items-center px-2 py-1 rounded-full transition focus:outline-none" style="color: #7F87A3;">
+    <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+      <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"></path>
+    </svg>
+    <span class="text-[10px] font-medium mt-0.5">Library</span>
+  </button>
+  <!-- Search Button -->
+  <button aria-label="Search" class="flex flex-col items-center px-2 py-1 rounded-full transition focus:outline-none" style="color: #7F87A3;">
+    <svg class="w-5 h-5 stroke-current stroke-2 fill-none" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="8"></circle>
+      <line x1="21" x2="16.65" y1="21" y2="16.65"></line>
+    </svg>
+    <span class="text-[10px] font-medium mt-0.5">Search</span>
+  </button>
+</div></nav>
+<!-- END: Floating Translucent Pill Bottom Navigation -->
+</div>
+<!-- END: Mobile Container -->
+
+</body></html>
