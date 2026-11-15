@@ -61,6 +61,7 @@ import java.util.Date
 fun SoftwareUpdateScreen(
     onBack: (() -> Unit)? = null,
     onRemindLater: (() -> Unit)? = null,
+    onCheckForUpdates: (() -> Unit)? = null,
     showBack: Boolean = onBack != null,
     modifier: Modifier = Modifier,
 ) {
@@ -106,7 +107,11 @@ fun SoftwareUpdateScreen(
                 pending = pending,
                 download = download,
                 onPrimary = {
-                    val info = pending ?: return@UpdateStatusCard
+                    val info = pending
+                    if (info == null) {
+                        onCheckForUpdates?.invoke()
+                        return@UpdateStatusCard
+                    }
                     when (val d = download) {
                         is AppUpdateManager.DownloadState.Ready -> AppUpdateManager.installApk(context, d.file)
                         is AppUpdateManager.DownloadState.Downloading -> Unit

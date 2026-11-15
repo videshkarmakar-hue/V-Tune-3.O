@@ -149,6 +149,9 @@ import com.music.bitchord.ui.performance.resolvePerformanceRefreshRate
 import com.music.bitchord.ui.performance.supportedPerformanceRefreshRates
 import com.music.bitchord.data.model.Account
 import com.music.bitchord.data.AppUpdateManager
+import com.music.bitchord.ui.screens.SoftwareUpdateScreen
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.music.bitchord.data.LocalMediaRepository
 import com.music.bitchord.data.NerdStats
 import com.music.bitchord.data.scrobbling.LastFM
@@ -416,6 +419,7 @@ fun SettingsScreen(
     val updateScope = rememberCoroutineScope()
     var checkingForUpdate by remember { mutableStateOf(false) }
     var updateCheck by remember { mutableStateOf<AppUpdateManager.ManualCheck?>(null) }
+    var showManualUpdateScreen by remember { mutableStateOf(false) }
 
     // Made fresh on every pass rather than remembered: it tallies the rows
     // that answered to the query, and that tally has to start from zero each
@@ -1709,8 +1713,8 @@ fun SettingsScreen(
         // place the user can ask the same question the app asks itself on
         // start-up, and the answer is worth reading on its own.
         if (shows(SettingsCategory.UPDATES)) SearchableSettingsGroup(search, header = stringResource(R.string.updates)) {
-            val checkTitle = stringResource(R.string.check_for_update)
-            row(checkTitle, "version", "release", "github", "upgrade") {
+            val checkTitle = stringResource(R.string.software_update)
+            row(checkTitle, "version", "release", "github", "upgrade", "update", "manual") {
                 val result = updateCheck
                 val subtitle = when {
                     checkingForUpdate -> stringResource(R.string.checking_for_update)
@@ -1726,8 +1730,6 @@ fun SettingsScreen(
                     icon = SfIcons.Upgrade,
                     title = checkTitle,
                     subtitle = subtitle,
-                    // The chevron would promise a page; the spinner says the
-                    // row is busy, and it is the only thing the tap does.
                     trailing = if (checkingForUpdate) {
                         {
                             CircularProgressIndicator(
@@ -1736,10 +1738,9 @@ fun SettingsScreen(
                                 modifier = Modifier.size(18.dp),
                             )
                         }
-                    } else {
-                        null
-                    },
+                    } else null,
                     onClick = {
+                        showManualUpdateScreen = true
                         if (!checkingForUpdate) {
                             checkingForUpdate = true
                             updateCheck = null
@@ -1826,6 +1827,35 @@ fun SettingsScreen(
                 }
             },
         )
+    }
+
+    if (showManualUpdateScreen) {
+        Dialog(
+            onDismissRequest = { showManualUpdateScreen = false },
+            properties = DialogProperties(
+                dismissOnBackPress = true,
+                dismissOnClickOutside = false,
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false,
+            ),
+        ) {
+            SoftwareUpdateScreen(
+                onBack = { showManualUpdateScreen = false },
+                onRemindLater = null,
+                onCheckForUpdates = {
+                    if (!checkingForUpdate) {
+                        checkingForUpdate = true
+                        updateCheck = null
+                        updateScope.launch {
+                            val outcome = AppUpdateManager.checkForUpdates(context)
+                            updateCheck = outcome
+                            checkingForUpdate = false
+                        }
+                    }
+                },
+                showBack = true,
+            )
+        }
     }
 
     if (showPerformanceWarning) {
