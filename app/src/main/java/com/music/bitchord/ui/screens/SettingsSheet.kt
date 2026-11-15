@@ -1,6 +1,7 @@
 package com.music.bitchord.ui.screens
 
 import com.music.bitchord.ui.icons.SfIcons
+import com.music.bitchord.BuildConfig
 import android.content.Context
 import androidx.annotation.StringRes
 import android.content.Intent
@@ -139,6 +140,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.style.TextDecoration
 import com.music.bitchord.ui.components.PillSegmentedControl
 import com.music.bitchord.ui.components.isGlassSupported
 import com.music.bitchord.ui.components.languageDisplayNameRes
@@ -1755,6 +1758,14 @@ fun SettingsScreen(
             }
         }
 
+        if (shows(SettingsCategory.DEVELOPER_CREDITS)) SearchableSettingsGroup(search, header = stringResource(R.string.developer_credits)) {
+            DeveloperCreditsContent()
+        }
+
+        if (shows(SettingsCategory.ABOUT_APP)) SearchableSettingsGroup(search, header = stringResource(R.string.about_app)) {
+            AboutAppContent()
+        }
+
         // Read after every group above has had its turn at the query, which is
         // what makes this an accurate "nothing here" rather than a guess.
         if (searching && !search.anyMatch) {
@@ -2813,6 +2824,8 @@ enum class SettingsCategory(@param:StringRes val title: Int) {
     MISCELLANEOUS(R.string.miscellaneous),
     LANGUAGE(R.string.language),
     UPDATES(R.string.updates),
+    DEVELOPER_CREDITS(R.string.developer_credits),
+    ABOUT_APP(R.string.about_app),
     ;
 
     val icon: ImageVector
@@ -2828,6 +2841,8 @@ enum class SettingsCategory(@param:StringRes val title: Int) {
             MISCELLANEOUS -> SfIcons.Miscellaneous
             LANGUAGE -> SfIcons.Language
             UPDATES -> SfIcons.Upgrade
+            DEVELOPER_CREDITS -> SfIcons.Person
+            ABOUT_APP -> SfIcons.Info
         }
 }
 
@@ -3041,5 +3056,274 @@ internal fun <T> ChoiceGroup(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DeveloperCreditsContent() {
+    val uriHandler = LocalUriHandler.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Text(
+            text = "DEVELOPER CREDITS",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = "Crafted With Vision. Built With Purpose.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        AsyncImage(
+            model = "https://cdn.phototourl.com/member/2026-09-24-d3b8ff6f-f0d4-43e0-9082-9f39cc851774.png",
+            contentDescription = "Videsh Karmakar",
+            modifier = Modifier
+                .size(120.dp)
+                .clip(CircleShape)
+                .align(Alignment.CenterHorizontally),
+            contentScale = ContentScale.Crop,
+        )
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = "Videsh Karmakar",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = "Founder · Developer · UI/UX Designer",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
+
+        Text(
+            text = "V-Tune 3.0 is proudly conceptualized, designed, and developed by Videsh Karmakar — bringing together software engineering, product design, and a passion for music to create a refined and seamless music-listening experience.\n\nFrom the interface and visual identity to the underlying product experience, every detail of V-Tune 3.0 is thoughtfully crafted with a focus on simplicity, performance, accessibility, and usability.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+
+        Text(
+            text = "CONNECT WITH THE DEVELOPER",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = "Stay connected and explore more of the developer's work, music, and creative projects.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        DeveloperCreditLinkRow(
+            label = "Official Website",
+            value = "videshkarmakar.carrd.co",
+            onClick = { uriHandler.openUri("https://videshkarmakar.carrd.co") },
+        )
+        DeveloperCreditInfoRow(
+            label = "Spotify",
+            value = "Videsh Karmakar — Artist Profile",
+        )
+        DeveloperCreditLinkRow(
+            label = "Instagram",
+            value = "@code.red_videsh",
+            onClick = { uriHandler.openUri("https://www.instagram.com/code.red_videsh") },
+        )
+        DeveloperCreditLinkRow(
+            label = "YouTube",
+            value = "@videshkarmakar2000",
+            onClick = { uriHandler.openUri("https://www.youtube.com/@videshkarmakar2000") },
+        )
+        DeveloperCreditLinkRow(
+            label = "Facebook",
+            value = "gfx.videsh",
+            onClick = { uriHandler.openUri("https://www.facebook.com/gfx.videsh") },
+        )
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+
+        Text(
+            text = "DEVELOPMENT & DESIGN",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        DeveloperCreditInfoRow(label = "Product", value = "V-Tune 3.0 — Music, Without the Limits.")
+        DeveloperCreditInfoRow(label = "Developed & Designed By", value = "Videsh Karmakar")
+        DeveloperCreditInfoRow(label = "Design & Prototyping", value = "Figma · Stitch")
+        DeveloperCreditInfoRow(label = "Platform", value = "Android · iOS Coming Soon")
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+
+        Text(
+            text = "ACKNOWLEDGEMENT",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = "Built independently with a commitment to thoughtful design, modern technology, and a better way to experience music.\n\nThank you for being part of V-Tune 3.0.\n\n© 2026 Videsh Karmakar. All Rights Reserved.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+@Composable
+private fun DeveloperCreditLinkRow(label: String, value: String, onClick: () -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.primary,
+            textDecoration = TextDecoration.Underline,
+            modifier = Modifier.clickable(onClick = onClick),
+        )
+    }
+}
+
+@Composable
+private fun DeveloperCreditInfoRow(label: String, value: String) {
+    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+@Composable
+private fun AboutAppContent() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Text(
+            text = "V-TUNE 3.O",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = "Best Spotify Music & YouTube Music Alternative for Low-End Devices.",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = "V-Tune 3.O is a modern music platform designed to make music streaming simple, smooth, and accessible for everyone.\n\nBuilt with a focus on lightweight performance, simplicity, and effortless music discovery, V-Tune 3.O aims to deliver an enjoyable listening experience without demanding high-end device specifications.\n\nDesigned especially for low-end Android devices, V-Tune 3.O focuses on efficient performance, intuitive navigation, and a clean listening environment.\n\nFrom discovering music to enjoying your favourite tracks, V-Tune 3.O brings a simple and accessible music experience to your fingertips.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+
+        Text(
+            text = "APP INFORMATION",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        DeveloperCreditInfoRow(label = "Application", value = "V-Tune 3.O")
+        DeveloperCreditInfoRow(label = "Version", value = BuildConfig.VERSION_NAME)
+        DeveloperCreditInfoRow(label = "Build", value = BuildConfig.VERSION_CODE.toString())
+        DeveloperCreditInfoRow(label = "Platform", value = "Android")
+        DeveloperCreditInfoRow(label = "iOS", value = "Coming Soon")
+        DeveloperCreditInfoRow(label = "Developed & Designed By", value = "Videsh Karmakar")
+        DeveloperCreditInfoRow(label = "UI/UX & Product Design", value = "Figma & Stitch")
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+
+        Text(
+            text = "ABOUT V-TUNE 3.O",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = "V-Tune 3.O is built to deliver a lightweight and modern music streaming experience, especially for devices with limited hardware capabilities.\n\nThe product focuses on efficient performance, intuitive navigation, and a clean visual experience, making music discovery and listening feel simple and accessible.\n\nDesigned with low-end devices in mind, V-Tune 3.O aims to reduce unnecessary complexity while keeping the listening experience smooth and enjoyable.\n\nLightweight. Smooth. Accessible.\n\nThat philosophy guides the design and development of V-Tune 3.O across every interaction.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+
+        Text(
+            text = "LEGAL & SUPPORT",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = "V-Tune 3.O is committed to providing a transparent, secure, and reliable experience for every user.\n\nThe following resources are available for information, assistance, and accountability:",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        DeveloperCreditInfoRow(label = "Privacy Policy", value = "Learn how V-Tune 3.O collects, uses, and protects user information.")
+        DeveloperCreditInfoRow(label = "Terms & Conditions", value = "Review the terms governing the use of the V-Tune 3.O application and services.")
+        DeveloperCreditInfoRow(label = "Open Source Licenses", value = "View the open-source software and components used within V-Tune 3.O.")
+        DeveloperCreditInfoRow(label = "Third-Party Licenses", value = "Review licenses and acknowledgements for third-party technologies and services.")
+        DeveloperCreditInfoRow(label = "Contact Support", value = "Get in touch with the V-Tune 3.O support team for assistance.")
+        DeveloperCreditInfoRow(label = "Report a Problem", value = "Report bugs, technical issues, or unexpected behaviour.")
+        DeveloperCreditInfoRow(label = "Copyright Information", value = "View copyright notices and intellectual-property information associated with V-Tune 3.O.")
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+
+        Text(
+            text = "VERSION & BUILD",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = "V-Tune 3.O ${BuildConfig.VERSION_NAME}\nBuild ${BuildConfig.VERSION_CODE}\n\n© 2026 Videsh Karmakar. All rights reserved.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+
+        Text(
+            text = "V-TUNE 3.O",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = "Best Spotify Music & YouTube Music Alternative for Low-End Devices.",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }

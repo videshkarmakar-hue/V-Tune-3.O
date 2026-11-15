@@ -978,16 +978,16 @@ object AppSettings {
         wifiOnlyDownloads.value = prefs.getBoolean(KEY_WIFI_ONLY_DOWNLOADS, true)
         exportDownloads.value = prefs.getBoolean(KEY_EXPORT_DOWNLOADS, false)
         syncDownloadedPlaylists.value = prefs.getBoolean(KEY_SYNC_DOWNLOADED_PLAYLISTS, false)
-        // Keep background update checks active for all installs (including existing installs
-        // that previously had this turned off) so release checks stay scheduled by default.
-        backgroundReleaseChecks.value = true
-        if (!prefs.getBoolean(KEY_BACKGROUND_RELEASE_CHECKS, false)) {
-            prefs.edit().putBoolean(KEY_BACKGROUND_RELEASE_CHECKS, true).apply()
-        } else if (!prefs.contains(KEY_BACKGROUND_RELEASE_CHECKS)) {
-            prefs.edit().putBoolean(KEY_BACKGROUND_RELEASE_CHECKS, true).apply()
+        // One-time migration: turn background update checks on for existing installs that
+        // had it off/unset before, while still allowing users to disable it afterwards.
+        if (!prefs.getBoolean(KEY_BACKGROUND_RELEASE_CHECKS_MIGRATED, false)) {
+            backgroundReleaseChecks.value = true
+            prefs.edit()
+                .putBoolean(KEY_BACKGROUND_RELEASE_CHECKS, true)
+                .putBoolean(KEY_BACKGROUND_RELEASE_CHECKS_MIGRATED, true)
+                .apply()
         } else {
-            // Ensure persisted state is also active.
-            prefs.edit().putBoolean(KEY_BACKGROUND_RELEASE_CHECKS, true).apply()
+            backgroundReleaseChecks.value = prefs.getBoolean(KEY_BACKGROUND_RELEASE_CHECKS, true)
         }
         crossfadeSeconds.value = prefs.getInt(KEY_CROSSFADE, 0)
         smartFadeEnabled.value = prefs.getBoolean(KEY_SMART_FADE, false)
@@ -2279,6 +2279,7 @@ object AppSettings {
     private const val KEY_EXPORT_DOWNLOADS = "export_downloads"
     private const val KEY_SYNC_DOWNLOADED_PLAYLISTS = "sync_downloaded_playlists"
     private const val KEY_BACKGROUND_RELEASE_CHECKS = "background_release_checks"
+    private const val KEY_BACKGROUND_RELEASE_CHECKS_MIGRATED = "background_release_checks_migrated_v1"
     private const val KEY_CROSSFADE = "crossfade_seconds"
     private const val KEY_SMART_FADE = "smart_fade_enabled"
     private const val KEY_AUTOMIX_PERFORMANCE_MODE = "automix_performance_mode"
