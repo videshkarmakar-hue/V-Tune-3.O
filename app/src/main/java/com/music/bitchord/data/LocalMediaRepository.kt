@@ -64,8 +64,9 @@ object LocalMediaRepository {
     }
 
     /**
-     * Retrieves all songs in the `Music/BitChord` directory, combining app downloads
-     * with any local audio files present in that folder.
+     * Retrieves all songs in the app's Music download folders (`V-Tune 3.O`,
+     * and legacy `BitChord`), combining app downloads with any local audio
+     * files present in those folders.
      *
      * The download record is the better source for a title and a credit — it
      * holds what the catalogue row said, not what a scanner guessed off a
@@ -94,8 +95,8 @@ object LocalMediaRepository {
                     MediaStore.Audio.Media.DATE_ADDED,
                     MediaStore.Audio.Media.DATE_MODIFIED,
                 )
-                val selection = "${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?"
-                val selectionArgs = arrayOf("%${DownloadStore.FOLDER}%")
+                val selection = "${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ? OR ${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?"
+                val selectionArgs = arrayOf("%${DownloadStore.FOLDER}%", "%${DownloadStore.LEGACY_FOLDER}%")
 
                 context.contentResolver.query(
                     MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
@@ -134,13 +135,17 @@ object LocalMediaRepository {
                     }
                 }
             } else {
-                val folder = File(
-                    android.os.Environment.getExternalStoragePublicDirectory(
-                        android.os.Environment.DIRECTORY_MUSIC,
-                    ),
-                    DownloadStore.FOLDER,
-                )
-                if (folder.exists() && folder.isDirectory) {
+                val folders = listOf(DownloadStore.FOLDER, DownloadStore.LEGACY_FOLDER)
+                    .distinct()
+                    .map {
+                        File(
+                            android.os.Environment.getExternalStoragePublicDirectory(
+                                android.os.Environment.DIRECTORY_MUSIC,
+                            ),
+                            it,
+                        )
+                    }
+                folders.filter { it.exists() && it.isDirectory }.forEach { folder ->
                     folder.listFiles()?.forEach { file ->
                         if (file.isFile && isAudioFileName(file.name)) {
                             val uriStr = Uri.fromFile(file).toString()

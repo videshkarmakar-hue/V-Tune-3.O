@@ -421,7 +421,7 @@ private fun StoryChrome(
             )
             Spacer(Modifier.width(7.dp))
             Text(
-                text = "BitChord",
+                text = "V-Tune 3.O",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.W700,
                 color = Color.White.copy(alpha = 0.9f),
