@@ -52,7 +52,6 @@ object ReleaseUpdateScheduler {
         val periodic = PeriodicWorkRequestBuilder<ReleaseUpdateCheckWorker>(PERIOD_HOURS, TimeUnit.HOURS, FLEX_HOURS, TimeUnit.HOURS)
             .setConstraints(constraints)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.MINUTES)
-            .addTag(ReleaseUpdateCheckWorker.TAG_PERIODIC)
             .build()
 
         runCatching {
@@ -74,7 +73,6 @@ object ReleaseUpdateScheduler {
         val builder = OneTimeWorkRequestBuilder<ReleaseUpdateCheckWorker>()
             .setConstraints(constraints)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.MINUTES)
-            .addTag(ReleaseUpdateCheckWorker.TAG_ONE_TIME)
 
         if (expedited) {
             builder.setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
