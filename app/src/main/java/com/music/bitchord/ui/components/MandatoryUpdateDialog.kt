@@ -76,6 +76,15 @@ fun MandatoryUpdateHost(
     val download by AppUpdateManager.download.collectAsState()
     var checking by remember { mutableStateOf(false) }
     var resolvingApk by remember { mutableStateOf(false) }
+    // Avoid re-launching the system installer in a loop for the same ready APK.
+    // Auto-prompt once per ready file; re-prompt on resume or explicit user action.
+    var promptedInstallForPath by remember { mutableStateOf<String?>(null) }
+    var resumeRepromptTick by remember { mutableStateOf(0) }
+
+    fun promptInstall(file: java.io.File) {
+        promptedInstallForPath = file.absolutePath
+        AppUpdateManager.installApk(context.findActivity() ?: context, file)
+    }
 
     fun forceCheck() {
         if (checking) return
@@ -104,6 +113,7 @@ fun MandatoryUpdateHost(
     }
 
     // Resume/foreground: verify install result, resume permission-gated install, and check again.
+    // Allow the ready installer prompt to be shown again after user returns (e.g. cancelled installer).
     DisposableEffect(lifecycleOwner, app) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -111,6 +121,7 @@ fun MandatoryUpdateHost(
                     AppUpdateManager.verifyInstalled(app)
                     AppUpdateManager.resumeInstallIfWaiting(app)
                     if (AppUpdateManager.isSnoozed()) AppUpdateManager.snooze(app, durationMs = 0L)
+                    resumeRepromptTick++
                     runCatching { AppUpdateManager.check(app, force = true) }
                 }
             }
@@ -130,14 +141,16 @@ fun MandatoryUpdateHost(
     }
 
     // Mandatory auto-update: if an update is pending, automatically download/install flow.
-    LaunchedEffect(pending?.version, pending?.apkUrl, download) {
+    LaunchedEffect(pending?.version, pending?.apkUrl, download, resumeRepromptTick) {
         val info = pending ?: return@LaunchedEffect
         if (AppUpdateManager.isSnoozed()) AppUpdateManager.snooze(app, durationMs = 0L)
         when (val d = download) {
             is AppUpdateManager.DownloadState.Downloading -> Unit
             is AppUpdateManager.DownloadState.Ready -> {
-                // Directly continue to installer; user confirms in system installer if required.
-                AppUpdateManager.installApk(context.findActivity() ?: context, d.file)
+                // Auto-prompt once per ready file; re-prompt on resume or explicit user action.
+                if (promptedInstallForPath != d.file.absolutePath) {
+                    promptInstall(d.file)
+                }
             }
             is AppUpdateManager.DownloadState.Idle,
             is AppUpdateManager.DownloadState.Failed -> {
@@ -178,7 +191,7 @@ fun MandatoryUpdateHost(
                 val p = AppUpdateManager.pending.value
                 when (d) {
                     is AppUpdateManager.DownloadState.Ready ->
-                        AppUpdateManager.installApk(context.findActivity() ?: context, d.file)
+                        promptInstall(d.file)
                     is AppUpdateManager.DownloadState.Downloading -> Unit
                     is AppUpdateManager.DownloadState.Failed -> {
                         if (!p?.apkUrl.isNullOrBlank()) {
