@@ -1,0 +1,392 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+<title>Explore Music Categories</title>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            oled: '#000000',
+            darkSurface: '#121212',
+            cardBg: '#181818',
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+<!-- BEGIN: Custom Card Styles -->
+<style data-purpose="category-card-styling">
+    /* Subtle split tone style inspired by the reference design */
+    .split-card {
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border-radius: 0.85rem;
+      aspect-ratio: 16 / 9.6;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .split-card:active {
+      transform: scale(0.97);
+      opacity: 0.9;
+    }
+    /* Left accent vertical stripe */
+    .split-card::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 24%;
+      background: rgba(255, 255, 255, 0.16);
+      z-index: 1;
+      pointer-events: none;
+    }
+    .card-text {
+      position: relative;
+      z-index: 10;
+      font-weight: 700;
+      font-size: 0.95rem;
+      line-height: 1.25;
+      letter-spacing: -0.01em;
+      color: #ffffff;
+      padding: 0.65rem 0.75rem;
+      max-width: 88%;
+      word-break: break-word;
+    }
+    /* Sub-badge text for image/textured cards */
+    .card-subtitle {
+      position: absolute;
+      right: 0.6rem;
+      bottom: 0.5rem;
+      font-size: 0.68rem;
+      font-weight: 600;
+      line-height: 1.15;
+      text-align: right;
+      color: rgba(255, 255, 255, 0.75);
+      z-index: 10;
+      max-width: 60%;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    }
+    /* Image background representation */
+    .card-bg-overlay {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      mix-blend-mode: luminosity;
+      opacity: 0.42;
+      z-index: 0;
+    }
+  </style>
+<style data-purpose="dock-blur">
+    .nav-pill-dock {
+      backdrop-filter: blur(28px) saturate(180%);
+      -webkit-backdrop-filter: blur(28px) saturate(180%);
+      background-color: rgba(26, 26, 26, 0.82);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.65);
+    }
+    /* Custom scrollbar hiding for app-like presentation */
+    body::-webkit-scrollbar {
+      display: none;
+    }
+    body {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+<!-- END: Custom Card Styles -->
+</head>
+<body class="bg-black text-white antialiased selection:bg-neutral-700 selection:text-white min-h-screen flex flex-col items-center justify-start pb-28" style="background: radial-gradient(circle at 50% 0%, rgb(41, 43, 57) 0%, rgb(30, 32, 43) 35%, rgb(20, 21, 29) 70%, rgb(14, 15, 20) 100%) fixed; min-height: 100vh;">
+<!-- Mobile Device Frame Container -->
+<div class="w-full max-w-md min-h-screen flex flex-col relative px-3 sm:px-4">
+<!-- BEGIN: TopStatusBar -->
+
+<!-- END: TopStatusBar -->
+<!-- BEGIN: HeaderBar -->
+<section class="w-full flex items-center justify-between pt-4 pb-4 px-1" data-purpose="page-title-bar"><h1 class="text-3xl font-extrabold tracking-tight select-none" style="color: rgb(241, 243, 249); letter-spacing: -0.02em; text-shadow: rgba(0, 0, 0, 0.4) 0px 2px 10px;">Explore</h1>
+<button aria-label="Profile and Settings" class="w-8 h-8 rounded-full flex items-center justify-center transition active:scale-95 shadow-md" style="background-color: rgba(41, 43, 57, 0.65); backdrop-filter: blur(12px); border: 1px solid rgba(142, 154, 195, 0.25); color: rgb(241, 243, 249);">
+<svg class="w-4 h-4 fill-currentColor" viewBox="0 0 24 24">
+<path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="currentColor"></path>
+</svg>
+</button></section>
+<!-- END: HeaderBar -->
+<!-- BEGIN: MainContentGrid -->
+<main class="w-full grid grid-cols-2 gap-2.5 sm:gap-3" data-purpose="category-grid"><!-- Card: Chill -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(50, 68, 94) 0%, rgb(32, 45, 64) 100%);" data-purpose="category-card">
+<div class="card-bg-overlay bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-neutral-200 to-transparent"></div>
+<span class="card-text">Chill</span>
+<span class="card-subtitle">Coffee Shop<br>Blend</span>
+</div>
+<!-- Card: Commute -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(110, 83, 37) 0%, rgb(70, 52, 20) 100%);" data-purpose="category-card">
+<div class="card-bg-overlay bg-gradient-to-tr from-amber-900 to-yellow-600"></div>
+<span class="card-text">Commute</span>
+<span class="card-subtitle">Feel-Good<br>Hip-Hop &amp; R&amp;B</span>
+</div>
+<!-- Card: Diwali -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(55, 59, 77) 0%, rgb(34, 37, 51) 100%);" data-purpose="category-card">
+<div class="card-bg-overlay bg-neutral-600"></div>
+<span class="card-text">Diwali</span>
+<span class="card-subtitle">Bollywood<br>Party</span>
+</div>
+<!-- Card: Energize -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(92, 77, 36) 0%, rgb(59, 49, 20) 100%);" data-purpose="category-card">
+<div class="card-bg-overlay bg-yellow-800"></div>
+<span class="card-text">Energize</span>
+<span class="card-subtitle">pump-up<br>pop</span>
+</div>
+<!-- Card: Feel good -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(45, 77, 61) 0%, rgb(26, 50, 38) 100%);" data-purpose="category-card">
+<div class="card-bg-overlay bg-emerald-700"></div>
+<span class="card-text">Feel good</span>
+<span class="card-subtitle">Sunshine<br>Indie</span>
+</div>
+<!-- Card: Focus -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(53, 59, 71) 0%, rgb(32, 36, 45) 100%);" data-purpose="category-card">
+<div class="card-bg-overlay bg-stone-700"></div>
+<span class="card-text">Focus</span>
+<span class="card-subtitle">Lofi Loft</span>
+</div>
+<!-- Card: Gaming -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(46, 58, 77) 0%, rgb(28, 36, 51) 100%);" data-purpose="category-card">
+<div class="card-bg-overlay bg-slate-700"></div>
+<span class="card-text">Gaming</span>
+<span class="card-subtitle">Gaming<br>Hits</span>
+</div>
+<!-- Card: Party -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(74, 53, 99) 0%, rgb(47, 33, 66) 100%);" data-purpose="category-card">
+<div class="card-bg-overlay bg-indigo-900"></div>
+<span class="card-text">Party</span>
+<span class="card-subtitle">Bollywood<br>Dance</span>
+</div>
+<!-- Card: Romance -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(97, 35, 46) 0%, rgb(61, 19, 28) 100%);" data-purpose="category-card">
+<div class="card-bg-overlay bg-red-900"></div>
+<span class="card-text">Romance</span>
+<span class="card-subtitle">Bollywood<br>Romantic</span>
+</div>
+<!-- Card: Sad -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(37, 40, 56) 0%, rgb(23, 25, 36) 100%);" data-purpose="category-card">
+<div class="card-bg-overlay bg-slate-800"></div>
+<span class="card-text">Sad</span>
+<span class="card-subtitle">Bollywood<br>Melancholy</span>
+</div>
+<!-- Card: Sleep -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(47, 51, 84) 0%, rgb(29, 31, 56) 100%);" data-purpose="category-card">
+<div class="card-bg-overlay bg-purple-950"></div>
+<span class="card-text">Sleep</span>
+<span class="card-subtitle">Classical<br>for Sleeping</span>
+</div>
+<!-- Card: Workout -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(100, 58, 39) 0%, rgb(62, 33, 19) 100%);" data-purpose="category-card">
+<div class="card-bg-overlay bg-orange-950"></div>
+<span class="card-text">Workout</span>
+<span class="card-subtitle">HIIT<br>Desi Pop</span>
+</div>
+<!-- Card: African -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(28, 74, 45) 0%, rgb(17, 47, 28) 100%);" data-purpose="category-card">
+<span class="card-text">African</span>
+</div>
+<!-- Card: Arabic -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(92, 45, 31) 0%, rgb(59, 27, 18) 100%);" data-purpose="category-card">
+<span class="card-text">Arabic</span>
+</div>
+<!-- Card: Bengali -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(74, 68, 42) 0%, rgb(45, 41, 25) 100%);" data-purpose="category-card">
+<span class="card-text">Bengali</span>
+</div>
+<!-- Card: Bhojpuri -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(79, 29, 83) 0%, rgb(50, 16, 54) 100%);" data-purpose="category-card">
+<span class="card-text">Bhojpuri</span>
+</div>
+<!-- Card: Carnatic classical -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(89, 53, 39) 0%, rgb(56, 32, 23) 100%);" data-purpose="category-card">
+<span class="card-text">Carnatic classical</span>
+</div>
+<!-- Card: Classical -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(55, 58, 70) 0%, rgb(33, 35, 43) 100%);" data-purpose="category-card">
+<span class="card-text">Classical</span>
+</div>
+<!-- Card: Country & Americana -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(39, 63, 96) 0%, rgb(23, 39, 62) 100%);" data-purpose="category-card">
+<span class="card-text">Country &amp; Americana</span>
+</div>
+<!-- Card: Dance & electronic -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(26, 68, 86) 0%, rgb(15, 42, 56) 100%);" data-purpose="category-card">
+<span class="card-text">Dance &amp; electronic</span>
+</div>
+<!-- Card: Decades -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(43, 69, 54) 0%, rgb(24, 43, 33) 100%);" data-purpose="category-card">
+<span class="card-text">Decades</span>
+</div>
+<!-- Card: Desi hip-hop -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(50, 53, 62) 0%, rgb(29, 30, 38) 100%);" data-purpose="category-card">
+<span class="card-text">Desi hip-hop</span>
+</div>
+<!-- Card: Devotional -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(48, 51, 66) 0%, rgb(28, 30, 42) 100%);" data-purpose="category-card">
+<span class="card-text">Devotional</span>
+</div>
+<!-- Card: Family -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(28, 66, 84) 0%, rgb(16, 41, 54) 100%);" data-purpose="category-card">
+<span class="card-text">Family</span>
+</div>
+<!-- Card: Folk & acoustic -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(37, 71, 42) 0%, rgb(22, 46, 26) 100%);" data-purpose="category-card">
+<span class="card-text">Folk &amp; acoustic</span>
+</div>
+<!-- Card: Ghazal/sufi -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(35, 71, 79) 0%, rgb(20, 44, 51) 100%);" data-purpose="category-card">
+<span class="card-text">Ghazal/sufi</span>
+</div>
+<!-- Card: Gujarati -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(74, 43, 32) 0%, rgb(47, 25, 18) 100%);" data-purpose="category-card">
+<span class="card-text">Gujarati</span>
+</div>
+<!-- Card: Haryanvi -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(31, 69, 90) 0%, rgb(17, 42, 58) 100%);" data-purpose="category-card">
+<span class="card-text">Haryanvi</span>
+</div>
+<!-- Card: Hindi -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(77, 68, 40) 0%, rgb(48, 42, 23) 100%);" data-purpose="category-card">
+<span class="card-text">Hindi</span>
+</div>
+<!-- Card: Hindustani classical -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(73, 40, 80) 0%, rgb(46, 23, 51) 100%);" data-purpose="category-card">
+<span class="card-text">Hindustani classical</span>
+</div>
+<!-- Card: Hip-hop -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(81, 39, 29) 0%, rgb(51, 22, 16) 100%);" data-purpose="category-card">
+<span class="card-text">Hip-hop</span>
+</div>
+<!-- Card: Indian indie -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(55, 58, 74) 0%, rgb(32, 34, 46) 100%);" data-purpose="category-card">
+<span class="card-text">Indian indie</span>
+</div>
+<!-- Card: Indian pop -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(46, 75, 60) 0%, rgb(27, 49, 37) 100%);" data-purpose="category-card">
+<span class="card-text">Indian pop</span>
+</div>
+<!-- Card: Indie & alternative -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(61, 66, 79) 0%, rgb(35, 39, 49) 100%);" data-purpose="category-card">
+<span class="card-text">Indie &amp; alternative</span>
+</div>
+<!-- Card: J-Pop -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(78, 42, 77) 0%, rgb(50, 25, 50) 100%);" data-purpose="category-card">
+<span class="card-text">J-Pop</span>
+</div>
+<!-- Card: Jazz -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(47, 59, 79) 0%, rgb(27, 36, 51) 100%);" data-purpose="category-card">
+<span class="card-text">Jazz</span>
+</div>
+<!-- Card: K-Pop -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(56, 49, 85) 0%, rgb(34, 29, 56) 100%);" data-purpose="category-card">
+<span class="card-text">K-Pop</span>
+</div>
+<!-- Card: Kannada -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(82, 64, 33) 0%, rgb(52, 40, 19) 100%);" data-purpose="category-card">
+<span class="card-text">Kannada</span>
+</div>
+<!-- Card: Latin -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(78, 60, 34) 0%, rgb(49, 37, 19) 100%);" data-purpose="category-card">
+<span class="card-text">Latin</span>
+</div>
+<!-- Card: Malayalam -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(27, 69, 39) 0%, rgb(15, 45, 24) 100%);" data-purpose="category-card">
+<span class="card-text">Malayalam</span>
+</div>
+<!-- Card: Marathi -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(54, 48, 78) 0%, rgb(33, 28, 50) 100%);" data-purpose="category-card">
+<span class="card-text">Marathi</span>
+</div>
+<!-- Card: Metal -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(52, 55, 67) 0%, rgb(30, 32, 40) 100%);" data-purpose="category-card">
+<span class="card-text">Metal</span>
+</div>
+<!-- Card: Monsoon -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(71, 67, 45) 0%, rgb(44, 41, 26) 100%);" data-purpose="category-card">
+<span class="card-text">Monsoon</span>
+</div>
+<!-- Card: Pop -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(78, 44, 72) 0%, rgb(50, 27, 47) 100%);" data-purpose="category-card">
+<span class="card-text">Pop</span>
+</div>
+<!-- Card: Punjabi -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(81, 43, 32) 0%, rgb(51, 25, 18) 100%);" data-purpose="category-card">
+<span class="card-text">Punjabi</span>
+</div>
+<!-- Card: R&B & soul -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(51, 43, 82) 0%, rgb(31, 25, 52) 100%);" data-purpose="category-card">
+<span class="card-text">R&amp;B &amp; soul</span>
+</div>
+<!-- Card: Reggae & caribbean -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(73, 69, 40) 0%, rgb(46, 43, 24) 100%);" data-purpose="category-card">
+<span class="card-text">Reggae &amp; caribbean</span>
+</div>
+<!-- Card: Rock -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(89, 33, 35) 0%, rgb(54, 18, 20) 100%);" data-purpose="category-card">
+<span class="card-text">Rock</span>
+</div>
+<!-- Card: Tamil -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(84, 31, 35) 0%, rgb(52, 18, 21) 100%);" data-purpose="category-card">
+<span class="card-text">Tamil</span>
+</div>
+<!-- Card: Telugu -->
+<div class="split-card" style="background: linear-gradient(135deg, rgb(74, 39, 71) 0%, rgb(47, 23, 46) 100%);" data-purpose="category-card">
+<span class="card-text">Telugu</span>
+</div></main>
+<!-- END: MainContentGrid -->
+<!-- BEGIN: FloatingBottomNavigation -->
+<nav aria-label="Bottom Navigation" class="fixed bottom-5 left-1/2 -translate-x-1/2 w-[92%] max-w-sm z-50 pointer-events-auto"><div class="nav-pill-dock rounded-full px-3 py-1.5 flex items-center justify-between shadow-2xl">
+<!-- Tab: Home -->
+<button class="flex-1 flex flex-col items-center justify-center py-1 transition" style="color: #7F87A3;">
+<svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span class="text-[9.5px] font-medium tracking-tight">Home</span>
+</button>
+<!-- Tab: Explore (Active State) -->
+<button class="flex-1 flex flex-col items-center justify-center py-1 relative" style="color: #F1F3F9;">
+<!-- Active Pill Background Indicator -->
+<div class="absolute inset-x-1.5 inset-y-0.5 rounded-full -z-10 shadow-sm" style="background: linear-gradient(135deg, #373B4D 0%, #292B39 100%); border: 1px solid rgba(142, 154, 195, 0.4); box-shadow: 0 2px 10px rgba(0,0,0,0.35);"></div>
+<svg class="w-5 h-5 mb-0.5 fill-current" viewBox="0 0 24 24">
+<path d="M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 0h6v6h-6v-6z"></path>
+</svg>
+<span class="text-[9.5px] font-bold tracking-tight" style="color: #F1F3F9;">Explore</span>
+</button>
+<!-- Tab: Library -->
+<button class="flex-1 flex flex-col items-center justify-center py-1 transition" style="color: #7F87A3;">
+<svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span class="text-[9.5px] font-medium tracking-tight">Library</span>
+</button>
+<!-- Tab: Search -->
+<button class="flex-1 flex flex-col items-center justify-center py-1 transition" style="color: #7F87A3;">
+<svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M21 21l-4.35-4.35m1.85-5.65a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span class="text-[9.5px] font-medium tracking-tight">Search</span>
+</button>
+</div></nav>
+<!-- END: FloatingBottomNavigation -->
+<!-- BEGIN: GestureBar -->
+<footer aria-hidden="true" class="fixed bottom-1 left-1/2 -translate-x-1/2 w-32 h-1 bg-neutral-600/60 rounded-full pointer-events-none z-50" style="background-color: rgba(142, 154, 195, 0.35);"></footer>
+<!-- END: GestureBar -->
+</div>
+
+
+
+
+</body></html>
