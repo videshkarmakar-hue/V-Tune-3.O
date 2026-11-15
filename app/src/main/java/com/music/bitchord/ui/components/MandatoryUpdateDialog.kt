@@ -1,52 +1,15 @@
 package com.music.bitchord.ui.components
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
@@ -54,28 +17,15 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
-import com.halilibo.richtext.markdown.Markdown
-import com.halilibo.richtext.ui.RichTextStyle
-import com.halilibo.richtext.ui.material3.RichText
-import com.music.bitchord.BuildConfig
-import com.music.bitchord.R
 import com.music.bitchord.data.AppUpdateManager
 import com.music.bitchord.data.AppUpdateManager.DownloadState
+import com.music.bitchord.ui.screens.SoftwareUpdateScreen
 import kotlinx.coroutines.delay
 
 /**
- * The mandatory update gate. Mounted once at the activity root — phone and TV
- * alike — and drawn in its own window so no page, sheet or alert can sit above
- * it.
- *
- * The card itself has no dismiss affordance and the dialog refuses both Back
- * and an outside tap. The only exit is [AppUpdateManager.pending] becoming
- * null, which happens when the package manager reports that the installed build
- * has caught up.
- *
- * [navigationKey] changes whenever the visible section changes. That re-checks
- * the release without turning every tab tap into a request — the manager holds
- * the result for its own TTL.
+ * Update host mounted once at the activity root. Shows the Software Update screen
+ * when a newer release is detected (and not snoozed), while keeping release checks
+ * active in foreground/background flows.
  */
 @Composable
 fun MandatoryUpdateHost(
@@ -86,16 +36,11 @@ fun MandatoryUpdateHost(
     val lifecycleOwner = LocalLifecycleOwner.current
     val update by AppUpdateManager.pending.collectAsStateWithLifecycle()
     val download by AppUpdateManager.download.collectAsStateWithLifecycle()
+    val snoozeUntil by AppUpdateManager.snoozeUntil.collectAsStateWithLifecycle()
 
-    // Every cold start checks the release immediately.
     LaunchedEffect(Unit) { AppUpdateManager.check(context, force = true) }
-
-    // Every navigation asks again, within the manager's cache window.
     LaunchedEffect(navigationKey) { AppUpdateManager.checkIfStale(context) }
 
-    // A release published while the app is already open is still enforced:
-    // check on each return to the foreground, then every half hour while it
-    // stays there. The manager's TTL keeps a quick app switch off the network.
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             while (true) {
@@ -105,20 +50,14 @@ fun MandatoryUpdateHost(
         }
     }
 
-    // Mandatory means the download is not a second decision: it starts as soon
-    // as the gate appears, so the button installs rather than asks. Keyed on
-    // the release only — keying on the download state would cancel the
-    // download the moment it reported its first progress tick.
     LaunchedEffect(update?.version, update?.apkUrl) {
         val info = update ?: return@LaunchedEffect
-        if (info.apkUrl != null && AppUpdateManager.download.value is DownloadState.Idle) {
+        // Auto-start download when an installable APK is available and user has not snoozed.
+        if (!AppUpdateManager.isSnoozed() && info.apkUrl != null && AppUpdateManager.download.value is DownloadState.Idle) {
             AppUpdateManager.startDownload(context)
         }
     }
 
-    // Returning from the installer (or from the unknown-sources screen) is the
-    // moment the installed version can be trusted again — and, if the flow was
-    // parked on that permission screen, the moment it can be finished.
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -131,19 +70,24 @@ fun MandatoryUpdateHost(
     }
 
     val pending = update ?: return
+    val snoozed = System.currentTimeMillis() < snoozeUntil
+    if (snoozed) return
+
+    BackHandler(enabled = true) { AppUpdateManager.snooze(context) }
 
     Dialog(
-        onDismissRequest = {},
+        onDismissRequest = { AppUpdateManager.snooze(context) },
         properties = DialogProperties(
-            dismissOnBackPress = false,
+            dismissOnBackPress = true,
             dismissOnClickOutside = false,
             usePlatformDefaultWidth = false,
             decorFitsSystemWindows = false,
         ),
     ) {
-        MandatoryUpdateCard(
-            update = pending,
-            download = download,
+        SoftwareUpdateScreen(
+            onBack = { AppUpdateManager.snooze(context) },
+            onRemindLater = { AppUpdateManager.snooze(context) },
+            showBack = true,
             modifier = modifier,
         )
     }
