@@ -1,0 +1,204 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport">
+<title>YouTube Music - Library</title>
+<!-- Load Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Custom configuration for accurate native dark theme styles -->
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            yt: {
+              black: '#000000',
+              surface: '#212124',
+              surfaceHover: '#2a2a2e',
+              border: '#272727',
+              textPrimary: '#ffffff',
+              textSecondary: '#9ca3af',
+              navHighlight: '#27272a'
+            }
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', 'Roboto', '"Segoe UI"', 'Helvetica', 'Arial', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+<!-- Custom base styles for mobile viewport and scroll behavior -->
+<style data-purpose="base-styling">
+    body {
+      background-color: #000000;
+      color: #ffffff;
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    /* Hide scrollbars */
+    ::-webkit-scrollbar {
+      display: none;
+    }
+    * {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-black text-white min-h-screen flex justify-center items-center overflow-x-hidden selection:bg-neutral-800">
+<!-- BEGIN: PhoneShellContainer -->
+<!-- Container simulating realistic Android/iOS high-resolution phone frame -->
+<div class="w-full max-w-[430px] h-[932px] max-h-screen bg-black flex flex-col justify-between relative overflow-hidden shadow-2xl" data-purpose="device-frame" style="background: radial-gradient(circle at 50% 0%, rgb(41, 43, 57) 0%, rgb(30, 32, 43) 38%, rgb(22, 23, 34) 70%, rgb(15, 16, 22) 100%);">
+<!-- BEGIN: TopStatusBar -->
+
+<!-- END: TopStatusBar -->
+<!-- BEGIN: MainContentArea -->
+<main class="flex-1 overflow-y-auto px-5 pt-3 pb-24 flex flex-col" data-purpose="library-content">
+<!-- BEGIN: HeaderRow -->
+<div class="flex items-center justify-between pb-6 pt-1" data-purpose="header-section">
+<h1 class="text-[34px] font-bold tracking-tight text-white">Library</h1>
+<!-- Right side utility actions: History & Profile -->
+<div class="flex items-center space-x-2.5">
+<!-- History Button -->
+<button aria-label="History" class="w-10 h-10 rounded-full bg-[#202024] hover:bg-[#2b2b30] flex items-center justify-center transition-colors" style="background-color: rgba(41, 43, 57, 0.65); border: 1px solid rgba(142, 154, 195, 0.2); box-shadow: rgba(15, 16, 22, 0.4) 0px 2px 10px;">
+<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+<path d="M3 3v5h5"></path>
+<path d="M12 7v5l4 2"></path>
+</svg>
+</button>
+<!-- User Profile Avatar Placeholder -->
+<button aria-label="Account Profile" class="w-10 h-10 rounded-full bg-[#202024] hover:bg-[#2b2b30] flex items-center justify-center overflow-hidden transition-colors" style="background-color: rgba(41, 43, 57, 0.65); border: 1px solid rgba(142, 154, 195, 0.2); box-shadow: rgba(15, 16, 22, 0.4) 0px 2px 10px;">
+<svg class="w-5 h-5 text-neutral-300" fill="currentColor" viewBox="0 0 24 24">
+<path clip-rule="evenodd" d="M12 4a4 4 0 100 8 4 4 0 000-8zm-7 14a7 7 0 1114 0H5z" fill-rule="evenodd"></path>
+</svg>
+</button>
+</div>
+</div>
+<!-- END: HeaderRow -->
+<!-- BEGIN: NavigationRows -->
+<nav class="flex flex-col mb-7" data-purpose="quick-navigation">
+<!-- Downloads Row -->
+<button class="flex items-center justify-between py-3.5 text-left group">
+<div class="flex items-center space-x-4">
+<svg class="w-5 h-5 text-white stroke-[2.2]" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+<polyline points="7 10 12 15 17 10"></polyline>
+<line x1="12" x2="12" y1="15" y2="3"></line>
+</svg>
+<span class="text-[17px] font-medium text-white">Downloads</span>
+</div>
+<svg class="w-4 h-4 text-neutral-500 group-active:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="color: rgb(158, 167, 196);">
+<polyline points="9 18 15 12 9 6"></polyline>
+</svg>
+</button>
+<!-- Subtle Separator -->
+<div class="h-[0.5px] bg-[#1a1a1c] w-full my-0.5" style="background-color: rgba(142, 154, 195, 0.12);"></div>
+<!-- Local Music Row -->
+<button class="flex items-center justify-between py-3.5 text-left group">
+<div class="flex items-center space-x-4">
+<svg class="w-5 h-5 text-white fill-current" viewBox="0 0 24 24">
+<path d="M10 4H4c-1.11 0-2 .89-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8l-2-2z"></path>
+</svg>
+<span class="text-[17px] font-medium text-white">Local Music</span>
+</div>
+<svg class="w-4 h-4 text-neutral-500 group-active:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="color: rgb(158, 167, 196);">
+<polyline points="9 18 15 12 9 6"></polyline>
+</svg>
+</button>
+<div class="mt-4 pt-1"></div></nav>
+<!-- END: NavigationRows -->
+<!-- BEGIN: PlaylistsSection -->
+<section class="mb-14" data-purpose="playlists-overview">
+<h2 class="text-xl font-bold text-white mb-4">Playlists</h2>
+<!-- Two Side-by-Side Action Cards -->
+<div class="grid grid-cols-2 gap-3.5">
+<!-- Card 1: New Playlist -->
+<div class="flex flex-col cursor-pointer group">
+<div class="aspect-square bg-[#1c1c1f] rounded-[22px] flex items-center justify-center border border-[#232326] group-active:bg-[#252528] transition-colors" style="background: radial-gradient(circle at 50% 25%, rgb(53, 56, 75) 0%, rgb(41, 43, 57) 55%, rgb(28, 30, 42) 100%); border: 1px solid rgba(142, 154, 195, 0.25); box-shadow: rgba(15, 16, 22, 0.7) 0px 10px 26px -6px;">
+<svg class="w-9 h-9 text-white stroke-[2.2]" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+<line x1="12" x2="12" y1="5" y2="19"></line>
+<line x1="5" x2="19" y1="12" y2="12"></line>
+</svg>
+</div>
+<div class="mt-2.5 px-0.5">
+<h3 class="font-bold text-[15px] leading-snug text-white tracking-tight">New playlist</h3>
+<p class="text-neutral-400 text-[13px] leading-tight mt-0.5 truncate">Saved to YouTube ...</p>
+</div>
+</div>
+<!-- Card 2: Import Spotify -->
+<div class="flex flex-col cursor-pointer group">
+<div class="aspect-square bg-[#1c1c1f] rounded-[22px] flex items-center justify-center border border-[#232326] group-active:bg-[#252528] transition-colors" style="background: radial-gradient(circle at 50% 25%, rgb(50, 53, 71) 0%, rgb(41, 43, 57) 55%, rgb(28, 30, 42) 100%); border: 1px solid rgba(142, 154, 195, 0.25); box-shadow: rgba(15, 16, 22, 0.7) 0px 10px 26px -6px;">
+<!-- Spotify SVG Logo -->
+<svg class="w-10 h-10 text-white fill-current" viewBox="0 0 24 24">
+<path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.496 17.306c-.215.353-.675.466-1.028.25-2.817-1.722-6.362-2.112-10.538-1.157-.402.093-.804-.16-.897-.562-.093-.403.16-.805.562-.898 4.568-1.044 8.49-.607 11.65 1.339.354.216.467.675.251 1.028zm1.467-3.26c-.27.44-.848.577-1.288.307-3.224-1.982-8.139-2.555-11.953-1.397-.497.15-1.026-.135-1.176-.632-.15-.496.136-1.026.632-1.176 4.354-1.322 9.775-.683 13.478 1.59.44.27.577.848.307 1.308zm.126-3.41c-3.864-2.295-10.245-2.507-13.92-1.39-.593.18-1.224-.156-1.404-.75-.18-.593.156-1.224.75-1.404 4.225-1.282 11.27-1.033 15.717 1.606.533.316.708 1.01.392 1.543-.316.533-1.01.708-1.535.395z"></path>
+</svg>
+</div>
+<div class="mt-2.5 px-0.5">
+<h3 class="font-bold text-[15px] leading-snug text-white tracking-tight">Import Spotify</h3>
+<p class="text-neutral-400 text-[13px] leading-tight mt-0.5 truncate">From a playlist link</p>
+</div>
+</div>
+</div>
+</section>
+<!-- END: PlaylistsSection -->
+<!-- BEGIN: AuthenticationPromoSection -->
+<section class="flex-1 flex flex-col items-center justify-center text-center px-4 max-w-sm mx-auto my-auto" data-purpose="sign-in-prompt">
+<p class="text-[14px] leading-relaxed text-neutral-300 font-normal mb-6">
+          Sign in to your Google account to see your liked songs, playlists, and YouTube Music history.
+        </p>
+<button class="bg-white hover:bg-neutral-200 active:scale-95 text-black font-semibold px-7 py-2.5 rounded-full text-sm transition-all shadow-md" style="background: linear-gradient(135deg, rgb(255, 255, 255) 0%, rgb(232, 236, 248) 100%); color: rgb(20, 21, 30); box-shadow: rgba(88, 97, 138, 0.35) 0px 4px 22px; border: 1px solid rgba(255, 255, 255, 0.6);">
+          Sign in
+        </button>
+</section>
+<!-- END: AuthenticationPromoSection -->
+</main>
+<!-- END: MainContentArea -->
+<!-- BEGIN: BottomNavigationShell -->
+<footer class="w-full bg-black/95 backdrop-blur-md pt-2 pb-2 px-3 border-t border-neutral-900/60 flex flex-col items-center" data-purpose="bottom-navigation-container" style="background: rgba(18, 19, 27, 0.92); border-color: rgba(142, 154, 195, 0.15);">
+<!-- Nav Icons Dock -->
+<nav class="w-full flex items-center justify-around" data-purpose="app-dock">
+<!-- Home Button -->
+<a class="flex flex-col items-center justify-center flex-1 py-1 text-neutral-400 hover:text-white transition-colors" href="#home" style="color: rgb(130, 139, 166);">
+<svg class="w-6 h-6 mb-1" fill="currentColor" viewBox="0 0 24 24">
+<path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"></path>
+</svg>
+<span class="text-[10.5px] font-medium tracking-tight">Home</span>
+</a>
+<!-- Explore Button -->
+<a class="flex flex-col items-center justify-center flex-1 py-1 text-neutral-400 hover:text-white transition-colors" href="#explore" style="color: rgb(130, 139, 166);">
+<div class="w-6 h-6 mb-1 grid grid-cols-2 gap-0.5 p-0.5">
+<div class="border-[1.8px] border-current rounded-[1px]"></div>
+<div class="border-[1.8px] border-current rounded-[1px]"></div>
+<div class="border-[1.8px] border-current rounded-[1px]"></div>
+<div class="border-[1.8px] border-current rounded-[1px]"></div>
+</div>
+<span class="text-[10.5px] font-medium tracking-tight">Explore</span>
+</a>
+<!-- Library Button (Active Pill State) -->
+<a class="flex flex-col items-center justify-center flex-1 py-1" href="#library">
+<div class="bg-[#242428] text-white px-5 py-1 rounded-full flex flex-col items-center justify-center" style="background: linear-gradient(135deg, rgb(54, 58, 78) 0%, rgb(41, 43, 57) 100%); border: 1px solid rgba(142, 154, 195, 0.38); box-shadow: rgba(41, 43, 57, 0.65) 0px 2px 12px;">
+<svg class="w-5 h-5 mb-0.5" fill="currentColor" viewBox="0 0 24 24">
+<path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"></path>
+</svg>
+<span class="text-[10.5px] font-semibold tracking-tight text-white">Library</span>
+</div>
+</a>
+<!-- Search Button -->
+<a class="flex flex-col items-center justify-center flex-1 py-1 text-neutral-400 hover:text-white transition-colors" href="#search" style="color: rgb(130, 139, 166);">
+<svg class="w-6 h-6 mb-1 stroke-[2.2]" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+<circle cx="11" cy="11" r="7"></circle>
+<line x1="21" x2="16.65" y1="21" y2="16.65"></line>
+</svg>
+<span class="text-[10.5px] font-medium tracking-tight">Search</span>
+</a>
+</nav>
+<!-- Android Home Bar / Gesture Pill Indicator -->
+<div class="w-32 h-1 bg-neutral-600 rounded-full mt-2.5 mb-1 opacity-70" data-purpose="gesture-indicator"></div>
+</footer>
+<!-- END: BottomNavigationShell -->
+</div>
+<!-- END: PhoneShellContainer -->
+
+</body></html>
