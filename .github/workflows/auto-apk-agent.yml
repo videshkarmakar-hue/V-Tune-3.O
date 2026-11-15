@@ -1,0 +1,118 @@
+name: Auto APK Agent (Every Change)
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auto-apk-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  build-versioned-apk:
+    name: Build & package versioned APK for every update
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Compute per-change version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE_NAME=$(grep -oP 'extra\["bitchordVersionName"\]\s*=\s*(?:\(findProperty\([^\n]*?:\s*)?"\K[^"]+' build.gradle.kts | head -n1 || echo "1.0.0")
+          BUILD_ID="${GITHUB_RUN_NUMBER}"
+          SHORT_SHA="${GITHUB_SHA::7}"
+          VERSION_NAME="${BASE_NAME}.${BUILD_ID}"
+          VERSION_CODE="${BUILD_ID}"
+          BETA_SUFFIX="ci.${BUILD_ID}.${SHORT_SHA}"
+          TAG="v${VERSION_NAME}-${BETA_SUFFIX}"
+          {
+            echo "base_name=${BASE_NAME}"
+            echo "build_id=${BUILD_ID}"
+            echo "short_sha=${SHORT_SHA}"
+            echo "version_name=${VERSION_NAME}"
+            echo "version_code=${VERSION_CODE}"
+            echo "beta_suffix=${BETA_SUFFIX}"
+            echo "tag=${TAG}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Computed version: ${VERSION_NAME} (${VERSION_CODE}) ${BETA_SUFFIX} tag=${TAG}"
+
+      - name: Build debug APK with unique version
+        run: |
+          ./gradlew :app:assembleProdDebug \
+            -PbitchordVersionName="${{ steps.version.outputs.version_name }}" \
+            -PbitchordVersionCode="${{ steps.version.outputs.version_code }}" \
+            -PbitchordBetaSuffix="${{ steps.version.outputs.beta_suffix }}" \
+            -x lint --console=plain --stacktrace
+
+      - name: Prepare versioned APK bundle (release agent)
+        id: agent
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/release_agent.py \
+            --version-name "${{ steps.version.outputs.version_name }}" \
+            --version-code "${{ steps.version.outputs.version_code }}" \
+            --beta-suffix "${{ steps.version.outputs.beta_suffix }}" \
+            --search-dir app/build/outputs/apk \
+            --dist-dir dist/auto-apk \
+            --modules app \
+            --build-types debug \
+            --allow-unsigned \
+            --skip-app-required \
+            --always-produce-artifacts \
+            --allow-dirty \
+            --json-report dist/auto-apk/auto-release-report.json
+          echo "status=ready" >> "$GITHUB_OUTPUT"
+
+      - name: Upload versioned APK artifact bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: v-tune-auto-apk-${{ steps.version.outputs.tag }}-${{ github.run_attempt }}
+          path: |
+            dist/auto-apk/*.apk
+            dist/auto-apk/RELEASE_NOTES.md
+            dist/auto-apk/release-manifest.json
+            dist/auto-apk/auto-release-report.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload version metadata summary
+        shell: bash
+        run: |
+          {
+            echo "### Auto APK Agent"
+            echo ""
+            echo "- Version: \`${{ steps.version.outputs.version_name }}\`"
+            echo "- Version code: \`${{ steps.version.outputs.version_code }}\`"
+            echo "- Suffix: \`${{ steps.version.outputs.beta_suffix }}\`"
+            echo "- Tag (generated): \`${{ steps.version.outputs.tag }}\`"
+            echo "- Commit: \`${{ github.sha }}\`"
+            echo "- Artifacts: versioned APK(s), notes, manifest, and agent report uploaded"
+          } >> "$GITHUB_STEP_SUMMARY"
