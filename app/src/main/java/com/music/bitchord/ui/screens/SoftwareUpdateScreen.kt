@@ -352,7 +352,7 @@ private fun UpdateCard(
         downloading != null -> "Downloading the update. Keep this screen open until it finishes."
         failed != null -> failed.message.takeIf { it.isNotBlank() }
             ?: "The download couldn't be completed. Try again."
-        !hasApk -> "A new version is available. Open the download page to get it."
+        !hasApk -> "A new version is available. Tap Update Download to get it."
         else -> "A new version is available. Download it when you're ready."
     }
 
