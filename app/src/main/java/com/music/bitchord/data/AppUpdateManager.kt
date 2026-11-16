@@ -31,19 +31,16 @@ import okhttp3.Request
 import java.io.File
 
 /**
- * The one place the app decides whether it is allowed to run.
+ * The one place the app learns that a newer build exists.
  *
  * V-Tune ships sideloaded releases, so a published release is the only thing
- * that can announce a newer build. This manager polls for the latest release, keeps the
- * result in a process-wide [MutableStateFlow], and owns the entire update round
- * trip — download, install, and the verification that finally lifts the gate.
+ * that can announce a newer build. This manager fetches the latest one, keeps
+ * the result in a process-wide [MutableStateFlow], and owns the update round
+ * trip — download, install, and the check that the installed package caught up.
  *
- * It is deliberately not tied to a screen. [com.music.bitchord.ui.components.MandatoryUpdateHost]
- * draws the gate once at the activity root, and every navigation only asks the
- * manager to re-check; no screen decides for itself whether an update matters.
- *
- * A release is *mandatory*: there is no "later" path. The gate stays until the
- * package manager reports a version that is no longer older than the release.
+ * Updates are manual: nothing is downloaded or installed until the user asks
+ * for it on Settings → App Update. Background checks only post a notification;
+ * they never block the app.
  */
 object AppUpdateManager {
 
