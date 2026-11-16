@@ -79,6 +79,8 @@ fun MandatoryUpdateHost(
     // Auto-prompt the installer once per ready APK to avoid launch loops.
     // Manual "Install" remains available if the user dismisses/cancels the installer.
     var promptedInstallForPath by remember { mutableStateOf<String?>(null) }
+    // Automatic download attempts for the release currently on screen.
+    var autoRetries by remember(pending?.version) { mutableStateOf(0) }
 
     fun promptInstall(file: java.io.File) {
         promptedInstallForPath = file.absolutePath
@@ -130,10 +132,13 @@ fun MandatoryUpdateHost(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // While app is open and no update is pending, poll periodically for newly published releases.
+    // While the app stays open, watch for a release published mid-session. Every
+    // launch already checks; this only covers a session left running for hours,
+    // and it is deliberately slow: the release API allows 60 anonymous requests
+    // an hour per address, and a hot poll would spend them on nothing.
     LaunchedEffect(app) {
         while (isActive) {
-            delay(3 * 60_000L)
+            delay(15 * 60_000L)
             if (AppUpdateManager.pending.value == null) {
                 runCatching { AppUpdateManager.check(app, force = true) }
             }
@@ -156,8 +161,16 @@ fun MandatoryUpdateHost(
                     promptInstall(d.file)
                 }
             }
-            is AppUpdateManager.DownloadState.Idle,
             is AppUpdateManager.DownloadState.Failed -> {
+                // Retried by itself a few times, then left to the card's button:
+                // a permanently broken asset must not turn into a download loop.
+                if (!info.apkUrl.isNullOrBlank() && autoRetries < 4) {
+                    autoRetries++
+                    delay(4000)
+                    AppUpdateManager.startDownload(app)
+                }
+            }
+            is AppUpdateManager.DownloadState.Idle -> {
                 if (!info.apkUrl.isNullOrBlank()) {
                     AppUpdateManager.startDownload(app)
                 } else if (!resolvingApk) {
