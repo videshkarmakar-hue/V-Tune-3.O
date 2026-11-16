@@ -682,8 +682,8 @@
         </service>
 
         <!--
-          WorkManager comes up on first use instead of at every launch, since the
-          one thing using it is a setting that is off by default.
+          WorkManager comes up on first use instead of at every launch; the release
+          check schedules itself from Application.onCreate.
         -->
         <provider
             android:name="androidx.startup.InitializationProvider"
