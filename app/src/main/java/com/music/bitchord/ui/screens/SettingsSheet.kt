@@ -151,10 +151,6 @@ import com.music.bitchord.ui.components.thumbnailBorder
 import com.music.bitchord.ui.performance.resolvePerformanceRefreshRate
 import com.music.bitchord.ui.performance.supportedPerformanceRefreshRates
 import com.music.bitchord.data.model.Account
-import com.music.bitchord.data.AppUpdateManager
-import com.music.bitchord.ui.screens.SoftwareUpdateScreen
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.music.bitchord.data.LocalMediaRepository
 import com.music.bitchord.data.NerdStats
 import com.music.bitchord.data.scrobbling.LastFM
@@ -415,14 +411,7 @@ fun SettingsScreen(
         }.getOrNull() ?: "1.0"
     }
 
-    // The Settings-side of the updater: one check on demand, with its own
-    // in-flight and "what did it say" state. The mandatory gate itself is
-    // mounted at the activity root and reacts to the manager's flow, so a
-    // check that finds a release covers the app on its own.
-    val updateScope = rememberCoroutineScope()
-    var checkingForUpdate by remember { mutableStateOf(false) }
-    var updateCheck by remember { mutableStateOf<AppUpdateManager.ManualCheck?>(null) }
-    var showManualUpdateScreen by remember { mutableStateOf(false) }
+
 
     // Made fresh on every pass rather than remembered: it tallies the rows
     // that answered to the query, and that tally has to start from zero each
@@ -1712,51 +1701,6 @@ fun SettingsScreen(
             }
         }
 
-        // Its own section rather than a line under About: this is the one
-        // place the user can ask the same question the app asks itself on
-        // start-up, and the answer is worth reading on its own.
-        if (shows(SettingsCategory.UPDATES)) SearchableSettingsGroup(search, header = stringResource(R.string.updates)) {
-            val checkTitle = stringResource(R.string.software_update)
-            row(checkTitle, "version", "release", "github", "upgrade", "update", "manual") {
-                val result = updateCheck
-                val subtitle = when {
-                    checkingForUpdate -> stringResource(R.string.checking_for_update)
-                    result is AppUpdateManager.ManualCheck.Available ->
-                        stringResource(R.string.update_available, result.version)
-                    result == AppUpdateManager.ManualCheck.UpToDate ->
-                        stringResource(R.string.update_up_to_date)
-                    result == AppUpdateManager.ManualCheck.Unreachable ->
-                        stringResource(R.string.update_check_failed)
-                    else -> stringResource(R.string.check_for_update_subtitle, version)
-                }
-                SettingsRow(
-                    icon = SfIcons.Upgrade,
-                    title = checkTitle,
-                    subtitle = subtitle,
-                    trailing = if (checkingForUpdate) {
-                        {
-                            CircularProgressIndicator(
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        }
-                    } else null,
-                    onClick = {
-                        showManualUpdateScreen = true
-                        if (!checkingForUpdate) {
-                            checkingForUpdate = true
-                            updateCheck = null
-                            updateScope.launch {
-                                val outcome = AppUpdateManager.checkForUpdates(context)
-                                updateCheck = outcome
-                                checkingForUpdate = false
-                            }
-                        }
-                    },
-                )
-            }
-        }
 
         if (shows(SettingsCategory.DEVELOPER_CREDITS)) SearchableSettingsGroup(search, header = stringResource(R.string.developer_credits)) {
             DeveloperCreditsContent()
@@ -1840,34 +1784,7 @@ fun SettingsScreen(
         )
     }
 
-    if (showManualUpdateScreen) {
-        Dialog(
-            onDismissRequest = { showManualUpdateScreen = false },
-            properties = DialogProperties(
-                dismissOnBackPress = true,
-                dismissOnClickOutside = false,
-                usePlatformDefaultWidth = false,
-                decorFitsSystemWindows = false,
-            ),
-        ) {
-            SoftwareUpdateScreen(
-                onBack = { showManualUpdateScreen = false },
-                onRemindLater = null,
-                onCheckForUpdates = {
-                    if (!checkingForUpdate) {
-                        checkingForUpdate = true
-                        updateCheck = null
-                        updateScope.launch {
-                            val outcome = AppUpdateManager.checkForUpdates(context)
-                            updateCheck = outcome
-                            checkingForUpdate = false
-                        }
-                    }
-                },
-                showBack = true,
-            )
-        }
-    }
+
 
     if (showPerformanceWarning) {
         AlertDialog(
