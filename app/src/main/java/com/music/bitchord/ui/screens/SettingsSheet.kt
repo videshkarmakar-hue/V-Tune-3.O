@@ -2740,7 +2740,6 @@ enum class SettingsCategory(@param:StringRes val title: Int) {
     YOUR_DATA(R.string.your_data),
     MISCELLANEOUS(R.string.miscellaneous),
     LANGUAGE(R.string.language),
-    UPDATES(R.string.updates),
     DEVELOPER_CREDITS(R.string.developer_credits),
     ABOUT_APP(R.string.about_app),
     ;
@@ -2757,7 +2756,6 @@ enum class SettingsCategory(@param:StringRes val title: Int) {
             YOUR_DATA -> SfIcons.YourData
             MISCELLANEOUS -> SfIcons.Miscellaneous
             LANGUAGE -> SfIcons.Language
-            UPDATES -> SfIcons.Upgrade
             DEVELOPER_CREDITS -> SfIcons.Person
             ABOUT_APP -> SfIcons.Info
         }
