@@ -162,7 +162,6 @@ import com.music.bitchord.ui.components.AccountProfileSelector
 import com.music.bitchord.ui.components.DacVolumeHud
 import com.music.bitchord.ui.components.DacVolumeKeys
 import com.music.bitchord.ui.components.LocalPlayingBarsMotion
-import com.music.bitchord.ui.components.MandatoryUpdateHost
 import com.music.bitchord.ui.components.handleDacVolumeKey
 import com.music.bitchord.ui.components.VolumeHud
 import com.music.bitchord.ui.navigation.AppDestination
@@ -5899,11 +5898,6 @@ private fun BitChordApp(
                 inOwnWindow = playerRaised || songActions != null || browseActions != null,
             )
         }
-
-        // ---- Mandatory update gate ----
-        // Last in the tree and non-closable: a published release blocks the app
-        // until it is installed, so a launch always ends up on the newest build.
-        MandatoryUpdateHost()
     }
 }
 

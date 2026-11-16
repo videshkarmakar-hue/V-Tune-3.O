@@ -25,12 +25,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -54,7 +50,6 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -62,19 +57,15 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.music.bitchord.BuildConfig
 import com.music.bitchord.R
 import com.music.bitchord.data.AppUpdateManager
-import com.music.bitchord.ui.components.IosSwitch
 import kotlinx.coroutines.launch
 import java.util.Date
 import kotlin.math.roundToInt
 
 /**
- * Settings → Check for Updates, as the page of its own the design asks for:
- * the installed build, the release waiting to be installed, and the switches
- * that decide how that release gets here.
+ * Settings → App Update.
  *
- * This screen never lifts the update gate — [com.music.bitchord.ui.components.MandatoryUpdateHost]
- * owns that and draws it over the whole app. What the switches do is pick how
- * the gate gets its APK: automatically, or only once the button is tapped.
+ * A manual updater: the user checks for a release, downloads it, and installs it
+ * when they choose to. Nothing is forced on launch and nothing blocks the app.
  */
 @Composable
 fun SoftwareUpdateScreen(
@@ -89,9 +80,6 @@ fun SoftwareUpdateScreen(
     val pending by AppUpdateManager.pending.collectAsState()
     val download by AppUpdateManager.download.collectAsState()
     val lastChecked by AppUpdateManager.lastCheckedWallMs.collectAsState()
-    val autoUpdateWifi by AppUpdateManager.autoUpdateWifi.collectAsState()
-    val allowCellular by AppUpdateManager.allowCellularDownload.collectAsState()
-    val frequency by AppUpdateManager.checkFrequency.collectAsState()
 
     var checking by remember { mutableStateOf(false) }
     var checkFailed by remember { mutableStateOf(false) }
@@ -108,8 +96,7 @@ fun SoftwareUpdateScreen(
         }
     }
 
-    // The gate has already checked at launch; this asks again on opening so the
-    // version on the card is the answer for right now.
+    // Check when the user opens this page, so the status is current.
     LaunchedEffect(Unit) {
         AppUpdateManager.loadPreferences(app)
         AppUpdateManager.verifyInstalled(app)
@@ -119,8 +106,8 @@ fun SoftwareUpdateScreen(
         checking = false
     }
 
-    // Back from the installer, or from the "install unknown apps" screen: finish
-    // what was started and re-read the installed version.
+    // Back from the installer or the install-permission screen: finish up and
+    // re-read the installed version.
     DisposableEffect(lifecycleOwner, app) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -184,20 +171,10 @@ fun SoftwareUpdateScreen(
                 onPrimary = primaryAction,
             )
 
-            Spacer(Modifier.height(26.dp))
+            Spacer(Modifier.height(14.dp))
 
-            UpdatePreferences(
-                autoUpdateWifi = autoUpdateWifi,
-                onAutoUpdateWifi = { AppUpdateManager.setAutoUpdateWifi(app, it) },
-                allowCellular = allowCellular,
-                onAllowCellular = { AppUpdateManager.setAllowCellularDownload(app, it) },
-                frequency = frequency,
-                onFrequency = { AppUpdateManager.setCheckFrequency(app, it) },
-                lastCheckedMs = lastChecked,
-                checking = checking,
-            )
+            LastCheckedRow(lastCheckedMs = lastChecked, checking = checking)
 
-            // Room for the dock under the last card, as the design leaves.
             Spacer(Modifier.height(72.dp))
         }
     }
@@ -205,15 +182,13 @@ fun SoftwareUpdateScreen(
     if (showInfo) {
         AlertDialog(
             onDismissRequest = { showInfo = false },
-            title = { Text("About updates") },
+            title = { Text("App Update") },
             text = {
                 Text(
-                    "V-Tune 3.O checks for a new release every time it opens. Updates are " +
-                        "required — a published release blocks the app until it is installed, " +
-                        "so there is no way to skip one.\n\n" +
-                        "Android asks once for permission to install updates. Allow " +
-                        "\"install unknown apps\" for V-Tune 3.O and the installer opens by " +
-                        "itself from then on.",
+                    "Open this page to check for a new version. If one is available, " +
+                        "tap Download and then Install to update V-Tune 3.O.\n\n" +
+                        "Installing may ask once for permission to install apps from " +
+                        "V-Tune 3.O. After you allow it, updates install from here.",
                 )
             },
             confirmButton = {
@@ -243,7 +218,7 @@ private fun ScreenHeader(onBack: (() -> Unit)?, onInfo: () -> Unit) {
             )
         }
         Text(
-            text = "Software Update",
+            text = "App Update",
             color = Color.White,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
@@ -274,7 +249,6 @@ private fun HeaderButton(onClick: (() -> Unit)?, enabled: Boolean, content: @Com
     }
 }
 
-/** The icon, the name and the build in hand — the thing being updated. */
 @Composable
 private fun AppIdentity() {
     Column(
@@ -366,7 +340,6 @@ private fun UpdateCard(
         ready != null -> "Ready to Install"
         downloading != null -> "Downloading"
         failed != null -> "Download Failed"
-        !hasApk -> "Update Found"
         else -> "Update Available"
     }
 
@@ -375,19 +348,19 @@ private fun UpdateCard(
             "Couldn't reach the update server. Check your connection and try again."
         info == null && checking -> "Looking for the newest release…"
         info == null -> "You're on the latest available version."
-        ready != null -> "Downloaded. Finish in the installer to continue."
-        downloading != null -> "Downloading the update. Keep V-Tune open until it finishes."
+        ready != null -> "Downloaded. Tap Install to finish updating."
+        downloading != null -> "Downloading the update. Keep this screen open until it finishes."
         failed != null -> failed.message.takeIf { it.isNotBlank() }
             ?: "The download couldn't be completed. Try again."
-        !hasApk -> "This release has no direct install package for this device. Open the download page instead."
-        else -> "This update is required. Download it to continue using V-Tune 3.O."
+        !hasApk -> "A new version is available. Open the download page to get it."
+        else -> "A new version is available. Download it when you're ready."
     }
 
     val primaryText = when {
         downloading != null -> "Downloading $percent%"
         ready != null -> stringResource(R.string.install_now)
         info != null && failed != null -> stringResource(R.string.try_again)
-        info != null && hasApk -> "Download & Install"
+        info != null && hasApk -> stringResource(R.string.download_update)
         info != null -> stringResource(R.string.open_download_page)
         checking -> stringResource(R.string.checking_for_update)
         else -> stringResource(R.string.check_for_update)
@@ -496,9 +469,9 @@ private fun UpdateCard(
             }
         }
 
-        if (info != null) {
+        if (info != null && hasApk) {
             Text(
-                text = "Install may ask for permission to install from V-Tune 3.O.",
+                text = "Installing may ask for permission to install from V-Tune 3.O.",
                 color = Color(0xFF7C86A3),
                 fontSize = 11.sp,
             )
@@ -507,161 +480,24 @@ private fun UpdateCard(
 }
 
 @Composable
-private fun UpdatePreferences(
-    autoUpdateWifi: Boolean,
-    onAutoUpdateWifi: (Boolean) -> Unit,
-    allowCellular: Boolean,
-    onAllowCellular: (Boolean) -> Unit,
-    frequency: AppUpdateManager.CheckFrequency,
-    onFrequency: (AppUpdateManager.CheckFrequency) -> Unit,
-    lastCheckedMs: Long,
-    checking: Boolean,
-) {
-    Text(
-        text = "UPDATE PREFERENCES",
-        color = Color(0xFF9CA3BF),
-        fontSize = 11.sp,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(start = 2.dp, bottom = 10.dp),
-    )
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xB3222430))
-            .border(1.dp, Color(0x388A93BB), RoundedCornerShape(16.dp)),
-    ) {
-        PreferenceRow(
-            title = "Auto-Update over Wi-Fi",
-            subtitle = "Installs a new release without asking",
-            trailing = {
-                IosSwitch(checked = autoUpdateWifi, onCheckedChange = onAutoUpdateWifi)
-            },
-            onClick = { onAutoUpdateWifi(!autoUpdateWifi) },
-        )
-
-        HorizontalDivider(thickness = 0.5.dp, color = Color(0xFF232326))
-
-        PreferenceRow(
-            title = "Download over Cellular Data",
-            subtitle = "Carrier data charges may apply",
-            trailing = {
-                IosSwitch(checked = allowCellular, onCheckedChange = onAllowCellular)
-            },
-            onClick = { onAllowCellular(!allowCellular) },
-        )
-
-        HorizontalDivider(thickness = 0.5.dp, color = Color(0xFF232326))
-
-        PreferenceRow(
-            title = "Check Frequency",
-            subtitle = lastCheckedLabel(lastCheckedMs = lastCheckedMs, checking = checking),
-            trailing = {
-                FrequencyPill(frequency = frequency, onFrequency = onFrequency)
-            },
-            onClick = null,
-        )
-    }
-}
-
-@Composable
-private fun PreferenceRow(
-    title: String,
-    subtitle: String,
-    trailing: @Composable () -> Unit,
-    onClick: (() -> Unit)?,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(
-                if (onClick != null) Modifier.clickable { onClick() } else Modifier,
-            )
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f).padding(end = 12.dp)) {
-            Text(
-                text = title,
-                color = Color.White,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = subtitle,
-                color = Color(0xFF9CA3BF),
-                fontSize = 11.sp,
-                lineHeight = 15.sp,
-            )
-        }
-        trailing()
-    }
-}
-
-@Composable
-private fun FrequencyPill(
-    frequency: AppUpdateManager.CheckFrequency,
-    onFrequency: (AppUpdateManager.CheckFrequency) -> Unit,
-) {
-    var open by remember { mutableStateOf(false) }
-
-    Box {
-        Row(
-            modifier = Modifier
-                .clip(CircleShape)
-                .background(Color(0xFF242634))
-                .border(1.dp, Color(0x408A93BB), CircleShape)
-                .clickable { open = true }
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = frequency.label,
-                color = Color(0xFFD7DCF0),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-            )
-            Spacer(Modifier.width(6.dp))
-            Icon(
-                Icons.Rounded.KeyboardArrowDown,
-                contentDescription = null,
-                tint = Color(0xFF9CA3BF),
-                modifier = Modifier.size(14.dp),
-            )
-        }
-        DropdownMenu(
-            expanded = open,
-            onDismissRequest = { open = false },
-        ) {
-            AppUpdateManager.CheckFrequency.entries.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(option.label) },
-                    onClick = {
-                        open = false
-                        onFrequency(option)
-                    },
-                )
-            }
-        }
-    }
-}
-
-private val AppUpdateManager.CheckFrequency.label: String
-    get() = when (this) {
-        AppUpdateManager.CheckFrequency.DAILY -> "Daily"
-        AppUpdateManager.CheckFrequency.WEEKLY -> "Weekly"
-        AppUpdateManager.CheckFrequency.MANUAL -> "Manual"
-    }
-
-@Composable
-private fun lastCheckedLabel(lastCheckedMs: Long, checking: Boolean): String {
+private fun LastCheckedRow(lastCheckedMs: Long, checking: Boolean) {
     val context = LocalContext.current
-    if (checking) return "Checking for the latest version…"
-    if (lastCheckedMs <= 0L) return "Last checked: Not yet"
-    val df = DateFormat.getMediumDateFormat(context)
-    val tf = DateFormat.getTimeFormat(context)
-    val when_ = Date(lastCheckedMs)
-    return "Last checked: ${df.format(when_)}, ${tf.format(when_)}"
+    val text = when {
+        checking -> "Checking for the latest version…"
+        lastCheckedMs > 0L -> {
+            val df = DateFormat.getMediumDateFormat(context)
+            val tf = DateFormat.getTimeFormat(context)
+            val d = Date(lastCheckedMs)
+            "Last checked: ${df.format(d)}, ${tf.format(d)}"
+        }
+        else -> "Last checked: Not yet"
+    }
+    Text(
+        text = text,
+        color = Color(0xFF7C86A3),
+        fontSize = 12.sp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp),
+    )
 }

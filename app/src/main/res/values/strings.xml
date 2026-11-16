@@ -181,10 +181,10 @@
     <string name="install_update">Install Update</string>
     <string name="retry_update">Try Again</string>
     <string name="open_download_page">Open Download Page</string>
-    <!-- Settings → Updates: the on-demand check that sits beside the mandatory gate. -->
+    <!-- Settings → App Update: manual in-app updates. -->
     <string name="updates">Updates</string>
-    <string name="check_for_updates">Check for Updates</string>
-    <string name="updates_required_note">Updates are required. V-Tune 3.O checks for a new release every time it opens and installs it as soon as one is published, so an update can never be skipped.</string>
+    <string name="check_for_updates">App Update</string>
+    <string name="app_update_subtitle">Check for new versions and install updates manually</string>
     <string name="update_installed_version">Installed: v%1$s</string>
     <string name="developer_credits">Developer Credits</string>
     <string name="about_app">About App</string>
