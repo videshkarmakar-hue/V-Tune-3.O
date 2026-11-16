@@ -151,6 +151,7 @@ import com.music.bitchord.ui.components.thumbnailBorder
 import com.music.bitchord.ui.performance.resolvePerformanceRefreshRate
 import com.music.bitchord.ui.performance.supportedPerformanceRefreshRates
 import com.music.bitchord.data.model.Account
+import com.music.bitchord.data.AppUpdateManager
 import com.music.bitchord.data.LocalMediaRepository
 import com.music.bitchord.data.NerdStats
 import com.music.bitchord.data.scrobbling.LastFM
@@ -1687,6 +1688,16 @@ fun SettingsScreen(
             }
         }
 
+        if (shows(SettingsCategory.UPDATES)) SearchableSettingsGroup(
+            search,
+            header = stringResource(R.string.check_for_updates),
+            footer = stringResource(R.string.updates_required_note),
+        ) {
+            row(stringResource(R.string.check_for_updates), "update", "upgrade", "version") {
+                CheckForUpdatesContent()
+            }
+        }
+
         if (shows(SettingsCategory.LANGUAGE)) SearchableSettingsGroup(search, header = stringResource(R.string.language)) {
             val appLanguageTitle = stringResource(R.string.app_language)
             row(appLanguageTitle, "locale", "translate") {
@@ -2739,6 +2750,7 @@ enum class SettingsCategory(@param:StringRes val title: Int) {
     STORAGE(R.string.storage),
     YOUR_DATA(R.string.your_data),
     MISCELLANEOUS(R.string.miscellaneous),
+    UPDATES(R.string.check_for_updates),
     LANGUAGE(R.string.language),
     DEVELOPER_CREDITS(R.string.developer_credits),
     ABOUT_APP(R.string.about_app),
@@ -2755,6 +2767,7 @@ enum class SettingsCategory(@param:StringRes val title: Int) {
             STORAGE -> SfIcons.Storage
             YOUR_DATA -> SfIcons.YourData
             MISCELLANEOUS -> SfIcons.Miscellaneous
+            UPDATES -> SfIcons.Upgrade
             LANGUAGE -> SfIcons.Language
             DEVELOPER_CREDITS -> SfIcons.Person
             ABOUT_APP -> SfIcons.Info
@@ -2971,6 +2984,197 @@ internal fun <T> ChoiceGroup(
                 }
             }
         }
+    }
+}
+
+/**
+ * Settings → Check for Updates.
+ *
+ * A read-out of the updater plus the one action that moves it along. The gate
+ * itself is not here: [com.music.bitchord.ui.components.MandatoryUpdateHost]
+ * draws it over the whole app whenever a release is pending, so this card only
+ * reports what that gate is about to do and lets the check be asked for by hand.
+ */
+@Composable
+private fun CheckForUpdatesContent() {
+    val context = LocalContext.current
+    val app = context.applicationContext
+    val scope = rememberCoroutineScope()
+
+    val pending by AppUpdateManager.pending.collectAsStateWithLifecycle()
+    val download by AppUpdateManager.download.collectAsStateWithLifecycle()
+    val lastChecked by AppUpdateManager.lastCheckedWallMs.collectAsStateWithLifecycle()
+
+    var checking by remember { mutableStateOf(false) }
+    var unreachable by remember { mutableStateOf(false) }
+
+    fun checkNow() {
+        if (checking) return
+        checking = true
+        unreachable = false
+        scope.launch {
+            val result = runCatching { AppUpdateManager.checkForUpdates(app) }.getOrNull()
+            unreachable = result == AppUpdateManager.ManualCheck.Unreachable
+            checking = false
+        }
+    }
+
+    // The gate checks at launch; this asks again on opening the section so the
+    // version and the date under it are never a stale answer.
+    LaunchedEffect(Unit) {
+        AppUpdateManager.loadPreferences(app)
+        AppUpdateManager.verifyInstalled(app)
+        checking = true
+        val result = runCatching { AppUpdateManager.checkForUpdates(app) }.getOrNull()
+        unreachable = result == AppUpdateManager.ManualCheck.Unreachable
+        checking = false
+    }
+
+    val info = pending
+    val downloading = download as? AppUpdateManager.DownloadState.Downloading
+    val ready = download as? AppUpdateManager.DownloadState.Ready
+    val failed = download as? AppUpdateManager.DownloadState.Failed
+    val percent = ((downloading?.fraction ?: 0f) * 100f).roundToInt().coerceIn(0, 100)
+    val installed = stringResource(R.string.update_installed_version, BuildConfig.VERSION_NAME)
+
+    val title = when {
+        info != null -> "Version ${info.version} available"
+        checking -> stringResource(R.string.checking_for_update)
+        unreachable -> stringResource(R.string.update_check_failed)
+        else -> stringResource(R.string.update_up_to_date)
+    }
+
+    val subtitle = when {
+        downloading != null -> "Downloading the update… $percent%"
+        ready != null -> "Downloaded. Finish in the installer to keep using V-Tune 3.O."
+        failed != null -> failed.message.takeIf { it.isNotBlank() }
+            ?: stringResource(R.string.update_check_failed)
+        info != null -> "Required update — it installs as soon as the download finishes."
+        else -> installed
+    }
+
+    val pill = when {
+        checking -> "Checking"
+        info == null && unreachable -> "Unavailable"
+        info == null -> "Up to date"
+        downloading != null -> "Downloading"
+        ready != null -> "Ready"
+        failed != null -> "Failed"
+        else -> "Update"
+    }
+
+    val hasApk = !info?.apkUrl.isNullOrBlank()
+    val actionLabel = when {
+        downloading != null -> "Downloading $percent%"
+        ready != null -> stringResource(R.string.install_now)
+        info != null && failed != null -> stringResource(R.string.try_again)
+        info != null && hasApk -> stringResource(R.string.download_update)
+        info != null -> stringResource(R.string.open_download_page)
+        checking -> stringResource(R.string.checking_for_update)
+        else -> stringResource(R.string.check_for_update)
+    }
+
+    val onAction: () -> Unit = {
+        when {
+            downloading != null -> Unit
+            ready != null -> AppUpdateManager.installApk(context, ready.file)
+            info != null && hasApk -> AppUpdateManager.startDownload(app)
+            info != null -> AppUpdateManager.openReleasePage(app)
+            else -> checkNow()
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = ROW_INSET, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.width(10.dp))
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f))
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
+            ) {
+                Text(
+                    text = pill,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+
+        if (downloading != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(downloading.fraction.coerceIn(0f, 1f))
+                        .height(4.dp)
+                        .background(MaterialTheme.colorScheme.primary),
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp)
+                .clip(CircleShape)
+                .background(
+                    if (downloading == null) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                )
+                .clickable(enabled = downloading == null, onClick = onAction),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = actionLabel,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = if (downloading == null) MaterialTheme.colorScheme.onPrimary
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        val checkedLabel = when {
+            checking -> stringResource(R.string.checking_for_update)
+            lastChecked <= 0L -> "Not checked yet"
+            else -> {
+                val minutes = ((System.currentTimeMillis() - lastChecked) / 60_000L).coerceAtLeast(0L)
+                when {
+                    minutes < 1L -> "Checked just now"
+                    minutes < 60L -> "Checked ${minutes}m ago"
+                    else -> "Checked ${minutes / 60L}h ago"
+                }
+            }
+        }
+        Text(
+            text = checkedLabel,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
