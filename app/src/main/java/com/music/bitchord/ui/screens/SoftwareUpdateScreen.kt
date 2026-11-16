@@ -78,6 +78,7 @@ fun SoftwareUpdateScreen(
 
     var checking by remember { mutableStateOf(false) }
     var checkFailed by remember { mutableStateOf(false) }
+    var userRequestedUpdate by remember { mutableStateOf(false) }
 
     fun runCheck(force: Boolean = true, notify: Boolean = true) {
         if (checking) return
@@ -96,6 +97,27 @@ fun SoftwareUpdateScreen(
         AppUpdateManager.verifyInstalled(app)
         runCheck(force = true, notify = false)
         onCheckForUpdates?.invoke()
+    }
+
+    // Reset one-tap install intent if the pending update changes/disappears.
+    LaunchedEffect(pending?.version) {
+        if (pending == null) userRequestedUpdate = false
+    }
+    LaunchedEffect(download) {
+        if (download is AppUpdateManager.DownloadState.Failed) {
+            userRequestedUpdate = false
+        }
+    }
+
+    // When the user taps Update, download and then install automatically once ready.
+    LaunchedEffect(download, pending?.version, userRequestedUpdate) {
+        val info = pending ?: return@LaunchedEffect
+        val ready = download as? AppUpdateManager.DownloadState.Ready ?: return@LaunchedEffect
+        if (!userRequestedUpdate) return@LaunchedEffect
+        if (ready.file.name.contains(info.version) && ready.file.isFile) {
+            userRequestedUpdate = false
+            AppUpdateManager.installApk(app, ready.file)
+        }
     }
 
     // Resume install after the user grants "install unknown apps" permission or
@@ -146,6 +168,7 @@ fun SoftwareUpdateScreen(
                 download = download,
                 checking = checking,
                 checkFailed = checkFailed,
+                userRequestedUpdate = userRequestedUpdate,
                 onPrimary = {
                     val info = pending
                     if (info == null) {
@@ -154,11 +177,11 @@ fun SoftwareUpdateScreen(
                     }
                     when (val state = download) {
                         is AppUpdateManager.DownloadState.Ready -> {
-                            // Ensure we install the APK for the currently pending release.
                             val expected = AppUpdateManager.pending.value
                             if (expected != null && state.file.name.contains(expected.version)) {
                                 AppUpdateManager.installApk(app, state.file)
                             } else {
+                                userRequestedUpdate = false
                                 runCheck(force = true, notify = false)
                             }
                         }
@@ -166,9 +189,10 @@ fun SoftwareUpdateScreen(
                         is AppUpdateManager.DownloadState.Failed,
                         is AppUpdateManager.DownloadState.Idle -> {
                             if (!info.apkUrl.isNullOrBlank()) {
+                                userRequestedUpdate = true
                                 AppUpdateManager.startDownload(app)
                             } else {
-                                // No direct install package for this device/build; open the download page.
+                                userRequestedUpdate = false
                                 AppUpdateManager.openReleasePage(app)
                             }
                         }
@@ -300,6 +324,7 @@ private fun UpdateStatusCard(
     download: AppUpdateManager.DownloadState,
     checking: Boolean,
     checkFailed: Boolean,
+    userRequestedUpdate: Boolean,
     onPrimary: () -> Unit,
     onSecondary: () -> Unit,
     onCheckAgain: () -> Unit,
@@ -321,6 +346,7 @@ private fun UpdateStatusCard(
         checking -> "Checking"
         pending == null && checkFailed -> "Unavailable"
         pending == null -> "Up to date"
+        ready != null && userRequestedUpdate -> "Installing"
         ready != null -> "Ready to install"
         downloading != null -> "Downloading"
         failed != null -> "Download failed"
@@ -333,8 +359,10 @@ private fun UpdateStatusCard(
             "Couldn't reach the update server. Check your connection and try again."
         pending == null ->
             "You're on the latest available version."
+        ready != null && userRequestedUpdate ->
+            "Update downloaded. Opening the installer… If prompted, allow installation to continue."
         ready != null ->
-            "The update is downloaded and ready to install."
+            "The update is downloaded. Tap Install update to continue."
         downloading != null ->
             "Downloading the latest version. Keep V-Tune open until it finishes."
         failed != null ->
@@ -347,17 +375,18 @@ private fun UpdateStatusCard(
                 ?.trim()
                 ?.take(140)
                 ?.ifBlank { null }
-                ?: "A newer version is available. Download and install it to update V-Tune."
+                ?: "Tap Update to download and install the latest version."
     }
 
     val primaryText = when {
         checking && pending == null -> stringResource(R.string.checking_for_update)
         pending == null -> stringResource(R.string.check_for_update)
         downloading != null -> "Downloading ${(downloading.fraction * 100).toInt()}%"
-        ready != null -> stringResource(R.string.install_now)
+        ready != null && userRequestedUpdate -> "Opening installer…"
+        ready != null -> "Install update"
         failed != null -> stringResource(R.string.try_again)
         !hasDirectInstall -> "Open download page"
-        else -> stringResource(R.string.download_update)
+        else -> "Update"
     }
 
     val primaryIcon = when {
@@ -372,6 +401,7 @@ private fun UpdateStatusCard(
     val primaryEnabled = when {
         downloading != null -> false
         checking && pending == null -> false
+        ready != null && userRequestedUpdate -> false
         else -> true
     }
 
