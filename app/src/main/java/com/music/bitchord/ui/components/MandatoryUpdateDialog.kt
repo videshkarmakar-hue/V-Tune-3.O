@@ -74,6 +74,10 @@ fun MandatoryUpdateHost(
 
     val pending by AppUpdateManager.pending.collectAsState()
     val download by AppUpdateManager.download.collectAsState()
+    // Read so the gate follows the switches on the update screen: turning the
+    // automatic download off leaves the card's button as the way through.
+    val autoDownloadEnabled by AppUpdateManager.autoUpdateWifi.collectAsState()
+    val allowCellularDownload by AppUpdateManager.allowCellularDownload.collectAsState()
     var checking by remember { mutableStateOf(false) }
     var resolvingApk by remember { mutableStateOf(false) }
     // Auto-prompt the installer once per ready APK to avoid launch loops.
@@ -85,6 +89,12 @@ fun MandatoryUpdateHost(
     fun promptInstall(file: java.io.File) {
         promptedInstallForPath = file.absolutePath
         AppUpdateManager.installApk(context.findActivity() ?: context, file)
+    }
+
+    /** The switches on the update screen decide whether the gate fetches by itself. */
+    fun mayAutoDownload(context: Context): Boolean {
+        if (!autoDownloadEnabled) return false
+        return !AppUpdateManager.isOnMeteredNetwork(context) || allowCellularDownload
     }
 
     fun ensureChecked(force: Boolean = false) {
@@ -133,12 +143,14 @@ fun MandatoryUpdateHost(
     }
 
     // While the app stays open, watch for a release published mid-session. Every
-    // launch already checks; this only covers a session left running for hours,
-    // and it is deliberately slow: the release API allows 60 anonymous requests
-    // an hour per address, and a hot poll would spend them on nothing.
+    // launch already checks, so this follows the frequency chosen on the update
+    // screen, and "Manual" means launches are the only check. It is deliberately
+    // never hot: the release API allows 60 anonymous requests an hour.
     LaunchedEffect(app) {
         while (isActive) {
-            delay(15 * 60_000L)
+            val hours = AppUpdateManager.checkFrequency.value.hours
+            if (hours <= 0) break
+            delay(hours * 60L * 60_000L)
             if (AppUpdateManager.pending.value == null) {
                 runCatching { AppUpdateManager.check(app, force = true) }
             }
@@ -146,7 +158,7 @@ fun MandatoryUpdateHost(
     }
 
     // Mandatory auto-update: automatically download and prompt install when an update is pending.
-    LaunchedEffect(pending?.version, pending?.apkUrl, download) {
+    LaunchedEffect(pending?.version, pending?.apkUrl, download, autoDownloadEnabled, allowCellularDownload) {
         val info = pending ?: run {
             promptedInstallForPath = null
             return@LaunchedEffect
@@ -164,7 +176,7 @@ fun MandatoryUpdateHost(
             is AppUpdateManager.DownloadState.Failed -> {
                 // Retried by itself a few times, then left to the card's button:
                 // a permanently broken asset must not turn into a download loop.
-                if (!info.apkUrl.isNullOrBlank() && autoRetries < 4) {
+                if (!info.apkUrl.isNullOrBlank() && autoRetries < 4 && mayAutoDownload(app)) {
                     autoRetries++
                     delay(4000)
                     AppUpdateManager.startDownload(app)
@@ -172,13 +184,13 @@ fun MandatoryUpdateHost(
             }
             is AppUpdateManager.DownloadState.Idle -> {
                 if (!info.apkUrl.isNullOrBlank()) {
-                    AppUpdateManager.startDownload(app)
+                    if (mayAutoDownload(app)) AppUpdateManager.startDownload(app)
                 } else if (!resolvingApk) {
                     resolvingApk = true
                     val refreshed = runCatching { AppUpdateManager.check(app, force = true) }.getOrNull()
                     resolvingApk = false
                     val apkUrl = refreshed?.apkUrl ?: AppUpdateManager.pending.value?.apkUrl
-                    if (!apkUrl.isNullOrBlank()) {
+                    if (!apkUrl.isNullOrBlank() && mayAutoDownload(app)) {
                         AppUpdateManager.startDownload(app)
                     }
                 }

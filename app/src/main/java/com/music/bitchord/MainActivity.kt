@@ -185,7 +185,9 @@ import com.music.bitchord.ui.screens.CACHE_FOLDER_BROWSE_ID
 import com.music.bitchord.ui.screens.ListenTogetherScreen
 import com.music.bitchord.ui.screens.PartyServerEditor
 import com.music.bitchord.ui.screens.SignatureApiEditor
+import com.music.bitchord.ui.screens.SettingsCategory
 import com.music.bitchord.ui.screens.SettingsScreen
+import com.music.bitchord.ui.screens.SoftwareUpdateScreen
 import com.music.bitchord.ui.screens.SourceEditorAlert
 import com.music.bitchord.ui.screens.SourcesScreen
 import com.music.bitchord.data.sources.TrackMatcher
@@ -3095,6 +3097,10 @@ private fun BitChordApp(
                                 onConfirmBitPerfect = { confirmBitPerfect = it },
                                 contentPadding = listPadding,
                             )
+                        } else if (pageRoute is AppRoute.SettingsSection && pageRoute.category == SettingsCategory.UPDATES) {
+                            // Updates are a page of their own rather than a slice
+                            // of the settings list: they read as status, not settings.
+                            SoftwareUpdateScreen(onBack = { navigator.pop() })
                         } else if (pageRoute == AppRoute.Settings || pageRoute is AppRoute.SettingsSection) {
                             // The main page and every category's page are the
                             // one screen, each showing its own share of the rows.

@@ -2,6 +2,8 @@ package com.music.bitchord.data
 
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
 import android.os.SystemClock
@@ -327,6 +329,21 @@ object AppUpdateManager {
     fun setCheckFrequency(context: Context, frequency: CheckFrequency) {
         _checkFrequency.value = frequency
         updatePrefs(context).edit().putInt(KEY_CHECK_FREQUENCY_HOURS, frequency.hours).apply()
+    }
+
+    /**
+     * Whether the connection the app is on right now is metered.
+     *
+     * Only the gate asks: a metered connection with the cellular switch off
+     * means the download waits for the button instead of spending a data plan.
+     * No capabilities at all (airplane mode, no route yet) reads as metered, so
+     * the automatic download does not start into a connection that isn't there.
+     */
+    fun isOnMeteredNetwork(context: Context): Boolean {
+        val manager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            ?: return false
+        val caps = manager.activeNetwork?.let { manager.getNetworkCapabilities(it) } ?: return true
+        return !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
     }
 
     private fun updatePrefs(context: Context) =
