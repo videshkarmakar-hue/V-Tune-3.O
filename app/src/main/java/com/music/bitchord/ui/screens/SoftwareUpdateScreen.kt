@@ -1,6 +1,11 @@
 package com.music.bitchord.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.text.format.DateFormat
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -52,6 +57,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.music.bitchord.BuildConfig
@@ -84,6 +90,16 @@ fun SoftwareUpdateScreen(
     var checking by remember { mutableStateOf(false) }
     var checkFailed by remember { mutableStateOf(false) }
     var showInfo by remember { mutableStateOf(false) }
+
+    // Background checks can only announce a release if the app may post notifications.
+    // Asked for here, on the page the alert leads to, and only while it is still missing.
+    val notificationsAllowed = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+        PackageManager.PERMISSION_GRANTED
+    var notifyPermissionGranted by remember { mutableStateOf(notificationsAllowed) }
+    val notifyPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted -> notifyPermissionGranted = granted }
 
     fun checkNow() {
         if (checking) return
@@ -174,6 +190,31 @@ fun SoftwareUpdateScreen(
             Spacer(Modifier.height(14.dp))
 
             LastCheckedRow(lastCheckedMs = lastChecked, checking = checking)
+
+            if (!notifyPermissionGranted) {
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { notifyPermission.launch(Manifest.permission.POST_NOTIFICATIONS) }
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        Icons.Rounded.Info,
+                        contentDescription = null,
+                        tint = Color(0xFFB8C2EC),
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.notification_permission_needed_for_updates),
+                        color = Color(0xFF9CA3BF),
+                        fontSize = 12.sp,
+                    )
+                }
+            }
 
             Spacer(Modifier.height(72.dp))
         }
