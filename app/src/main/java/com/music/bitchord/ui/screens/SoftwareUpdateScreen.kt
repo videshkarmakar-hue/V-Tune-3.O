@@ -123,7 +123,6 @@ fun SoftwareUpdateScreen(
                 download = download,
                 checking = checking,
                 checkFailed = checkFailed,
-                lastCheckedMs = lastChecked,
                 onPrimary = {
                     val info = pending
                     if (info == null) {
@@ -216,4 +215,247 @@ private fun AppIdentityBlock(installedVersion: String, hasUpdate: Boolean) {
                     .size(64.dp)
                     .clip(RoundedCornerShape(20.dp))
                     .background(
-                      
+                        Brush.linearGradient(
+                            listOf(Color(0xFF373A4D), Color(0xFF292B39), Color(0xFF1A1C25)),
+                        ),
+                    )
+                    .border(1.dp, Color(0x598A93BB), RoundedCornerShape(20.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.ic_logo),
+                    contentDescription = null,
+                    modifier = Modifier.size(42.dp),
+                    contentScale = ContentScale.Fit,
+                )
+            }
+            if (hasUpdate) {
+                Box(
+                    modifier = Modifier
+                        .size(14.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF6C7BB8))
+                        .border(2.dp, Color(0xFF14151D), CircleShape),
+                )
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = "V-Tune 3.O",
+            color = Color.White,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.height(6.dp))
+        Box(
+            modifier = Modifier
+                .clip(CircleShape)
+                .background(Color(0xB3242633))
+                .border(1.dp, Color(0x338A93BB), CircleShape)
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+        ) {
+            Text(
+                text = "Current: v$installedVersion",
+                color = Color(0xFF9CA3BF),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+            )
+        }
+    }
+}
+
+@Composable
+private fun UpdateStatusCard(
+    pending: AppUpdateManager.UpdateInfo?,
+    download: AppUpdateManager.DownloadState,
+    checking: Boolean,
+    checkFailed: Boolean,
+    onPrimary: () -> Unit,
+) {
+    val downloading = download as? AppUpdateManager.DownloadState.Downloading
+    val ready = download as? AppUpdateManager.DownloadState.Ready
+    val failed = download as? AppUpdateManager.DownloadState.Failed
+    val hasDirectInstall = !pending?.apkUrl.isNullOrBlank()
+
+    val title = when {
+        checking && pending == null -> stringResource(R.string.checking_for_update)
+        pending != null -> "Version ${pending.version} available"
+        checkFailed -> stringResource(R.string.update_check_failed)
+        else -> stringResource(R.string.update_up_to_date)
+    }
+
+    val statusLabel = when {
+        checking -> "Checking"
+        pending == null && checkFailed -> "Unavailable"
+        pending == null -> "Up to date"
+        ready != null -> "Ready to install"
+        downloading != null -> "Downloading"
+        failed != null -> "Download failed"
+        !hasDirectInstall -> "Update found"
+        else -> "Update available"
+    }
+
+    val subtitle = when {
+        pending == null && checkFailed -> "Couldn't reach the update server. Check your connection and try again."
+        pending == null -> "You're on the latest available version."
+        ready != null -> "The update is downloaded and ready to install."
+        downloading != null -> "Downloading the latest version. Keep the app open until it finishes."
+        failed != null -> failed.message.ifBlank { "The download couldn't be completed. Try again." }
+        !hasDirectInstall -> "A newer version was found, but a direct install package isn't available for this device right now. Check again later."
+        else -> pending.notes?.lineSequence()?.firstOrNull()?.trim()?.take(140)?.ifBlank { null }
+            ?: "A newer version is available. Download and install it to update."
+    }
+
+    val primaryText = when {
+        checking && pending == null -> stringResource(R.string.checking_for_update)
+        pending == null -> stringResource(R.string.check_for_update)
+        downloading != null -> "Downloading ${(downloading.fraction * 100).toInt()}%"
+        ready != null -> stringResource(R.string.install_now)
+        failed != null -> stringResource(R.string.try_again)
+        !hasDirectInstall -> "Check again"
+        else -> stringResource(R.string.download_update)
+    }
+
+    val primaryIcon = when {
+        pending == null || !hasDirectInstall || failed != null -> Icons.Rounded.Refresh
+        else -> Icons.Rounded.Download
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(Color(0xD9292B39), Color(0xCC1E202C)),
+                ),
+            )
+            .border(1.dp, Color(0x408A93BB), RoundedCornerShape(16.dp))
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top,
+        ) {
+            Column(Modifier.weight(1f).padding(end = 8.dp)) {
+                Text(title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    subtitle,
+                    color = Color(0xFF9CA3BF),
+                    fontSize = 12.sp,
+                    lineHeight = 17.sp,
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(Color(0x296C7BB8))
+                    .border(1.dp, Color(0x598A93BB), CircleShape)
+                    .padding(horizontal = 8.dp, vertical = 3.dp),
+            ) {
+                Text(
+                    statusLabel,
+                    color = Color(0xFFB8C2EC),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            val enabled = !checking || pending != null
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (downloading == null && enabled) {
+                            Brush.linearGradient(listOf(Color(0xFFF5F7FF), Color(0xFFE3E7FA)))
+                        } else {
+                            Brush.linearGradient(listOf(Color(0x88B8BED6), Color(0x889CA3BF)))
+                        },
+                    )
+                    .clickable(enabled = downloading == null && enabled) { onPrimary() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        primaryIcon,
+                        contentDescription = null,
+                        tint = Color(0xFF161722),
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        primaryText,
+                        color = Color(0xFF161722),
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
+                    )
+                }
+            }
+
+            if (downloading != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(Color(0x22FFFFFF)),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(downloading.fraction.coerceIn(0f, 1f))
+                            .height(4.dp)
+                            .background(Color(0xFF7C8BD4)),
+                    )
+                }
+                Text(
+                    "Keep this screen open while the update downloads.",
+                    color = Color(0xFF9CA3BF),
+                    fontSize = 11.sp,
+                )
+            }
+
+            if (pending != null && (ready != null || !pending.apkUrl.isNullOrBlank())) {
+                Text(
+                    "Install may ask for permission to install from V-Tune 3.O.",
+                    color = Color(0xFF9CA3BF),
+                    fontSize = 11.sp,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LastCheckedRow(lastCheckedMs: Long, checking: Boolean) {
+    val context = LocalContext.current
+    val text = when {
+        checking -> "Checking for the latest version…"
+        lastCheckedMs > 0L -> {
+            val df = DateFormat.getMediumDateFormat(context)
+            val tf = DateFormat.getTimeFormat(context)
+            val d = Date(lastCheckedMs)
+            "Last checked: ${df.format(d)}, ${tf.format(d)}"
+        }
+        else -> "Last checked: Not yet"
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = text,
+            color = Color(0xFF7C86A3),
+            fontSize = 12.sp,
+        )
+    }
+}
