@@ -199,8 +199,8 @@ object AddonAuth {
     /** What to tell the listener when an addon refused credentials that were sent. */
     fun rejectionMessage(code: String?): String = when (code) {
         "stale_proof" -> "This addon rejected the request because this phone's clock is wrong"
-        "unavailable" -> "This addon couldn't check BitChord's verification right now"
-        else -> "This addon didn't accept BitChord's verification" + (code?.let { " ($it)" } ?: "")
+        "unavailable" -> "This addon couldn't check V-Tune 3.O's verification right now"
+        else -> "This addon didn't accept V-Tune 3.O's verification" + (code?.let { " ($it)" } ?: "")
     }
 
     // ── Session ───────────────────────────────────────────────────────────
@@ -222,7 +222,7 @@ object AddonAuth {
                 Refusal(e.message ?: "Verification refused", System.currentTimeMillis() + e.backoffMs, transient = false)
                     .also { refusal = it }.raise()
             } catch (e: Exception) {
-                val message = "Couldn't reach BitChord's addon verification service"
+                val message = "Couldn't reach V-Tune 3.O's addon verification service"
                 TrackLog.w(TAG, "addon auth: $message", e)
                 Refusal(message, System.currentTimeMillis() + TRANSIENT_BACKOFF_MS, transient = true)
                     .also { refusal = it }.raise()
@@ -281,7 +281,7 @@ object AddonAuth {
             generateAttestedKey(alias, Base64.getUrlDecoder().decode(challenge.challenge))
         } catch (e: Exception) {
             deleteKey(alias)
-            throw AttestRefused("This device can't prove it is running the official BitChord app (no hardware key attestation)")
+            throw AttestRefused("This device can't prove it is running the official V-Tune 3.O app (no hardware key attestation)")
         }
         try {
             val body = json.encodeToString(
