@@ -24,11 +24,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -43,11 +45,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.music.bitchord.BuildConfig
 import com.music.bitchord.R
 import com.music.bitchord.data.AppUpdateManager
@@ -63,7 +68,10 @@ fun SoftwareUpdateScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val app = context.applicationContext
     val scope = rememberCoroutineScope()
+    val lifecycleOwner = LocalLifecycleOwner.current
+
     val pending by AppUpdateManager.pending.collectAsState()
     val download by AppUpdateManager.download.collectAsState()
     val lastChecked by AppUpdateManager.lastCheckedWallMs.collectAsState()
@@ -71,21 +79,36 @@ fun SoftwareUpdateScreen(
     var checking by remember { mutableStateOf(false) }
     var checkFailed by remember { mutableStateOf(false) }
 
-    fun runCheck() {
+    fun runCheck(force: Boolean = true, notify: Boolean = true) {
         if (checking) return
         checking = true
         checkFailed = false
         scope.launch {
-            val result = runCatching { AppUpdateManager.checkForUpdates(context) }.getOrNull()
+            val result = runCatching { AppUpdateManager.checkForUpdates(app) }.getOrNull()
             checkFailed = result == AppUpdateManager.ManualCheck.Unreachable
             checking = false
-            onCheckForUpdates?.invoke()
+            if (notify) onCheckForUpdates?.invoke()
         }
     }
 
     LaunchedEffect(Unit) {
-        AppUpdateManager.loadPreferences(context.applicationContext)
-        runCheck()
+        AppUpdateManager.loadPreferences(app)
+        AppUpdateManager.verifyInstalled(app)
+        runCheck(force = true, notify = false)
+        onCheckForUpdates?.invoke()
+    }
+
+    // Resume install after the user grants "install unknown apps" permission or
+    // returns from the installer, and re-verify so the UI reflects the outcome.
+    DisposableEffect(lifecycleOwner, app) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                AppUpdateManager.resumeInstallIfWaiting(app)
+                AppUpdateManager.verifyInstalled(app)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     val bg = Brush.radialGradient(
@@ -126,33 +149,40 @@ fun SoftwareUpdateScreen(
                 onPrimary = {
                     val info = pending
                     if (info == null) {
-                        runCheck()
+                        runCheck(force = true, notify = true)
                         return@UpdateStatusCard
                     }
-                    when (download) {
-                        is AppUpdateManager.DownloadState.Ready ->
-                            AppUpdateManager.installApk(context, (download as AppUpdateManager.DownloadState.Ready).file)
+                    when (val state = download) {
+                        is AppUpdateManager.DownloadState.Ready -> {
+                            // Ensure we install the APK for the currently pending release.
+                            val expected = AppUpdateManager.pending.value
+                            if (expected != null && state.file.name.contains(expected.version)) {
+                                AppUpdateManager.installApk(app, state.file)
+                            } else {
+                                runCheck(force = true, notify = false)
+                            }
+                        }
                         is AppUpdateManager.DownloadState.Downloading -> Unit
                         is AppUpdateManager.DownloadState.Failed,
                         is AppUpdateManager.DownloadState.Idle -> {
                             if (!info.apkUrl.isNullOrBlank()) {
-                                AppUpdateManager.startDownload(context)
+                                AppUpdateManager.startDownload(app)
                             } else {
-                                scope.launch {
-                                    checking = true
-                                    checkFailed = false
-                                    val refreshed = runCatching { AppUpdateManager.check(context, force = true) }.getOrNull()
-                                    checking = false
-                                    checkFailed = refreshed == null
-                                    val apkUrl = refreshed?.apkUrl ?: AppUpdateManager.pending.value?.apkUrl
-                                    if (!apkUrl.isNullOrBlank()) {
-                                        AppUpdateManager.startDownload(context)
-                                    }
-                                }
+                                // No direct install package for this device/build; open the download page.
+                                AppUpdateManager.openReleasePage(app)
                             }
                         }
                     }
                 },
+                onSecondary = {
+                    val info = pending ?: return@UpdateStatusCard
+                    if (!info.releaseUrl.isNullOrBlank()) {
+                        AppUpdateManager.openReleasePage(app)
+                    } else {
+                        runCheck(force = true, notify = true)
+                    }
+                },
+                onCheckAgain = { runCheck(force = true, notify = true) },
             )
 
             Spacer(Modifier.height(16.dp))
@@ -271,6 +301,8 @@ private fun UpdateStatusCard(
     checking: Boolean,
     checkFailed: Boolean,
     onPrimary: () -> Unit,
+    onSecondary: () -> Unit,
+    onCheckAgain: () -> Unit,
 ) {
     val downloading = download as? AppUpdateManager.DownloadState.Downloading
     val ready = download as? AppUpdateManager.DownloadState.Ready
@@ -280,8 +312,9 @@ private fun UpdateStatusCard(
     val title = when {
         checking && pending == null -> stringResource(R.string.checking_for_update)
         pending != null -> "Version ${pending.version} available"
-        checkFailed -> stringResource(R.string.update_check_failed)
-        else -> stringResource(R.string.update_up_to_date)
+        checkFailed && pending == null -> stringResource(R.string.update_check_failed)
+        pending == null -> stringResource(R.string.update_up_to_date)
+        else -> "Version ${pending.version} available"
     }
 
     val statusLabel = when {
@@ -296,14 +329,25 @@ private fun UpdateStatusCard(
     }
 
     val subtitle = when {
-        pending == null && checkFailed -> "Couldn't reach the update server. Check your connection and try again."
-        pending == null -> "You're on the latest available version."
-        ready != null -> "The update is downloaded and ready to install."
-        downloading != null -> "Downloading the latest version. Keep the app open until it finishes."
-        failed != null -> failed.message.ifBlank { "The download couldn't be completed. Try again." }
-        !hasDirectInstall -> "A newer version was found, but a direct install package isn't available for this device right now. Check again later."
-        else -> pending.notes?.lineSequence()?.firstOrNull()?.trim()?.take(140)?.ifBlank { null }
-            ?: "A newer version is available. Download and install it to update."
+        pending == null && checkFailed ->
+            "Couldn't reach the update server. Check your connection and try again."
+        pending == null ->
+            "You're on the latest available version."
+        ready != null ->
+            "The update is downloaded and ready to install."
+        downloading != null ->
+            "Downloading the latest version. Keep V-Tune open until it finishes."
+        failed != null ->
+            failed.message.ifBlank { "The download couldn't be completed. Try again." }
+        !hasDirectInstall ->
+            "A newer version is available. A direct install package isn't available for this device right now, but you can download the update from the release page."
+        else ->
+            pending.notes?.lineSequence()
+                ?.firstOrNull { it.isNotBlank() }
+                ?.trim()
+                ?.take(140)
+                ?.ifBlank { null }
+                ?: "A newer version is available. Download and install it to update V-Tune."
     }
 
     val primaryText = when {
@@ -312,13 +356,30 @@ private fun UpdateStatusCard(
         downloading != null -> "Downloading ${(downloading.fraction * 100).toInt()}%"
         ready != null -> stringResource(R.string.install_now)
         failed != null -> stringResource(R.string.try_again)
-        !hasDirectInstall -> "Check again"
+        !hasDirectInstall -> "Open download page"
         else -> stringResource(R.string.download_update)
     }
 
     val primaryIcon = when {
-        pending == null || !hasDirectInstall || failed != null -> Icons.Rounded.Refresh
+        pending == null -> Icons.Rounded.Refresh
+        downloading != null -> Icons.Rounded.Download
+        ready != null -> Icons.Rounded.Download
+        failed != null -> Icons.Rounded.Refresh
+        !hasDirectInstall -> Icons.Rounded.OpenInNew
         else -> Icons.Rounded.Download
+    }
+
+    val primaryEnabled = when {
+        downloading != null -> false
+        checking && pending == null -> false
+        else -> true
+    }
+
+    val showSecondary = pending != null && (hasDirectInstall || failed != null)
+    val secondaryText = when {
+        failed != null -> "Open download page"
+        hasDirectInstall -> "Open download page"
+        else -> null
     }
 
     Column(
@@ -366,20 +427,19 @@ private fun UpdateStatusCard(
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            val enabled = !checking || pending != null
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
                     .clip(CircleShape)
                     .background(
-                        if (downloading == null && enabled) {
+                        if (primaryEnabled) {
                             Brush.linearGradient(listOf(Color(0xFFF5F7FF), Color(0xFFE3E7FA)))
                         } else {
                             Brush.linearGradient(listOf(Color(0x88B8BED6), Color(0x889CA3BF)))
                         },
                     )
-                    .clickable(enabled = downloading == null && enabled) { onPrimary() },
+                    .clickable(enabled = primaryEnabled) { onPrimary() },
                 contentAlignment = Alignment.Center,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -421,7 +481,65 @@ private fun UpdateStatusCard(
                 )
             }
 
-            if (pending != null && (ready != null || !pending.apkUrl.isNullOrBlank())) {
+            if (showSecondary && secondaryText != null && downloading == null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp)
+                        .clip(CircleShape)
+                        .background(Color(0x33242633))
+                        .border(1.dp, Color(0x408A93BB), CircleShape)
+                        .clickable { onSecondary() },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Rounded.OpenInNew,
+                            contentDescription = null,
+                            tint = Color(0xFFE2E6F5),
+                            modifier = Modifier.size(15.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            secondaryText,
+                            color = Color(0xFFE2E6F5),
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 13.sp,
+                        )
+                    }
+                }
+            }
+
+            if (pending != null && !hasDirectInstall && downloading == null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp)
+                        .clip(CircleShape)
+                        .background(Color(0x33242633))
+                        .border(1.dp, Color(0x408A93BB), CircleShape)
+                        .clickable(enabled = !checking) { onCheckAgain() },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Rounded.Refresh,
+                            contentDescription = null,
+                            tint = Color(0xFFE2E6F5),
+                            modifier = Modifier.size(15.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "Check again",
+                            color = Color(0xFFE2E6F5),
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 13.sp,
+                        )
+                    }
+                }
+            }
+
+            if (pending != null && (ready != null || hasDirectInstall)) {
                 Text(
                     "Install may ask for permission to install from V-Tune 3.O.",
                     color = Color(0xFF9CA3BF),
