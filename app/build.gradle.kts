@@ -98,9 +98,9 @@ android {
             "\"${addonAuthServer.replace("\\", "\\\\").replace("\"", "\\\"")}\"",
         )
 
-        // Mandatory update enforcement. The latest published release is the source
-        // of truth; the APK prefix tells this app's assets apart from the TV
-        // and watch files that share the same release. See AppUpdateManager.
+        // Automatic update checks. The latest published release is the source of
+        // truth; the APK prefix tells this app's assets apart from the TV and watch
+        // files that share the same release. See AppUpdateManager.
         buildConfigField(
             "String",
             "UPDATE_RELEASE_API_URL",
