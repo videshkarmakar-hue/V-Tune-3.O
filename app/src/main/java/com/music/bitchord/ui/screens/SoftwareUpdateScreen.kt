@@ -1,11 +1,6 @@
 package com.music.bitchord.ui.screens
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
 import android.text.format.DateFormat
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,17 +23,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,15 +47,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.BuildConfig
 import com.music.bitchord.R
 import com.music.bitchord.data.AppUpdateManager
-import com.music.bitchord.data.settings.AppSettings
 import kotlinx.coroutines.launch
 import java.util.Date
 
@@ -79,10 +67,26 @@ fun SoftwareUpdateScreen(
     val scope = rememberCoroutineScope()
     val pending by AppUpdateManager.pending.collectAsState()
     val download by AppUpdateManager.download.collectAsState()
-    val autoWifi by AppUpdateManager.autoUpdateWifi.collectAsState()
-    val allowCellular by AppUpdateManager.allowCellularDownload.collectAsState()
-    val frequency by AppUpdateManager.checkFrequency.collectAsState()
     val lastChecked by AppUpdateManager.lastCheckedWallMs.collectAsState()
+
+    var checking by remember { mutableStateOf(false) }
+    var checkFailed by remember { mutableStateOf(false) }
+
+    fun runCheck(force: Boolean = true) {
+        if (checking) return
+        checking = true
+        checkFailed = false
+        scope.launch {
+            val result = runCatching { AppUpdateManager.checkForUpdates(context) }.getOrNull()
+            checkFailed = result == AppUpdateManager.ManualCheck.Unreachable
+            checking = false
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        AppUpdateManager.loadPreferences(context.applicationContext)
+        runCheck(force = true)
+    }
 
     val bg = Brush.radialGradient(
         colors = listOf(
@@ -117,23 +121,32 @@ fun SoftwareUpdateScreen(
             UpdateStatusCard(
                 pending = pending,
                 download = download,
+                checking = checking,
+                checkFailed = checkFailed,
+                lastCheckedMs = lastChecked,
                 onPrimary = {
                     val info = pending
                     if (info == null) {
+                        runCheck(force = true)
                         onCheckForUpdates?.invoke()
                         return@UpdateStatusCard
                     }
                     when (val d = download) {
                         is AppUpdateManager.DownloadState.Ready -> AppUpdateManager.installApk(context, d.file)
                         is AppUpdateManager.DownloadState.Downloading -> Unit
-                        is AppUpdateManager.DownloadState.Failed -> AppUpdateManager.startDownload(context)
-                        else -> {
-                            if (info.apkUrl != null) {
+                        is AppUpdateManager.DownloadState.Failed,
+                        is AppUpdateManager.DownloadState.Idle -> {
+                            if (!info.apkUrl.isNullOrBlank()) {
                                 AppUpdateManager.startDownload(context)
                             } else {
                                 scope.launch {
-                                    val refreshed = AppUpdateManager.check(context, force = true)
-                                    if (refreshed?.apkUrl != null) {
+                                    checking = true
+                                    checkFailed = false
+                                    val refreshed = runCatching { AppUpdateManager.check(context, force = true) }.getOrNull()
+                                    checking = false
+                                    checkFailed = refreshed == null && AppUpdateManager.lastCheckedWallMs.value == lastChecked
+                                    val apkUrl = refreshed?.apkUrl ?: AppUpdateManager.pending.value?.apkUrl
+                                    if (!apkUrl.isNullOrBlank()) {
                                         AppUpdateManager.startDownload(context)
                                     }
                                 }
@@ -141,19 +154,6 @@ fun SoftwareUpdateScreen(
                         }
                     }
                 },
-                onRemindLater = onRemindLater,
-            )
-
-            Spacer(Modifier.height(28.dp))
-
-            UpdatePreferencesSection(
-                autoWifi = autoWifi,
-                allowCellular = allowCellular,
-                frequency = frequency,
-                lastCheckedMs = lastChecked,
-                onAutoWifi = { AppUpdateManager.setAutoUpdateWifi(context, it) },
-                onAllowCellular = { AppUpdateManager.setAllowCellularDownload(context, it) },
-                onFrequency = { AppUpdateManager.setCheckFrequency(context, it) },
             )
 
             Spacer(Modifier.height(24.dp))
