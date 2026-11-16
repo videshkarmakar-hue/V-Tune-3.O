@@ -173,9 +173,9 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         ListeningStats.init(this)
         // After AppSettings, whose switch decides whether half of it runs.
         ArtistFacts.init(this)
-        // Automatic/background update checks and mandatory auto-update prompts are disabled.
-        // Users update manually from Settings > Software update.
-        runCatching { com.music.bitchord.update.ReleaseUpdateScheduler.cancel(this) }
+        // Automatic release checks: the periodic GitHub poll and a check for this launch,
+        // so a published build announces itself without the app ever blocking on it.
+        runCatching { com.music.bitchord.update.ReleaseUpdateScheduler.ensureScheduled(this) }
         // One cache directory can only be opened once per process, and
         // PlaybackService shares this one — so it's opened here, not there.
         AudioCache.init(this)

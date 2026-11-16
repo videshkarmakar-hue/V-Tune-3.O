@@ -155,8 +155,9 @@
     <string name="app_update_notification_channel_name">App updates</string>
     <string name="app_update_notification_channel_desc">Notifications when a new V-Tune 3.O release is available</string>
     <string name="app_update_notification_title">New update available</string>
-    <string name="app_update_notification_text">V-Tune 3.O %1$s is available. Tap to open the app and update.</string>
+    <string name="app_update_notification_text">V-Tune 3.O %1$s is available. Tap to update now.</string>
     <string name="app_update_notification_action_view">View release</string>
+    <string name="app_update_notification_action_update">Update Now</string>
     <string name="update_downloading_body">Downloading V-Tune 3.O %1$s…</string>
     <string name="update_ready_body">V-Tune 3.O %1$s is ready to install.</string>
     <string name="update_failed_body">Couldn’t download V-Tune 3.O %1$s.</string>
@@ -180,7 +181,7 @@
     <string name="update_downloading_button">Downloading %1$d%%</string>
     <string name="install_update">Install Update</string>
     <string name="retry_update">Try Again</string>
-    <string name="open_download_page">Open Download Page</string>
+    <string name="open_download_page">Update Download</string>
     <!-- Settings → App Update: manual in-app updates. -->
     <string name="updates">Updates</string>
     <string name="check_for_updates">App Update</string>

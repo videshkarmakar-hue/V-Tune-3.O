@@ -252,10 +252,12 @@ object AppSettings {
     val syncDownloadedPlaylists = MutableStateFlow(false)
 
     /**
-     * Automatic/background release checks are disabled. App updates are manual from Settings.
-     * Kept for compatibility with existing preferences/UI state; always treated as off.
+     * Whether new published releases are looked for in the background.
+     *
+     * On by default: the check only ever posts a notification, and installing stays a
+     * choice made on Settings → App Update. See [com.music.bitchord.update.ReleaseUpdateScheduler].
      */
-    val backgroundReleaseChecks = MutableStateFlow(false)
+    val backgroundReleaseChecks = MutableStateFlow(true)
 
     /** Whether the active network charges for data. `null` while offline. */
     val meteredConnection = MutableStateFlow<Boolean?>(null)
@@ -978,10 +980,9 @@ object AppSettings {
         wifiOnlyDownloads.value = prefs.getBoolean(KEY_WIFI_ONLY_DOWNLOADS, true)
         exportDownloads.value = prefs.getBoolean(KEY_EXPORT_DOWNLOADS, false)
         syncDownloadedPlaylists.value = prefs.getBoolean(KEY_SYNC_DOWNLOADED_PLAYLISTS, false)
-        // Automatic background update checks removed; updates are manual from Settings.
-        backgroundReleaseChecks.value = false
+        backgroundReleaseChecks.value = prefs.getBoolean(KEY_BACKGROUND_RELEASE_CHECKS, true)
         prefs.edit()
-            .putBoolean(KEY_BACKGROUND_RELEASE_CHECKS, false)
+            .putBoolean(KEY_BACKGROUND_RELEASE_CHECKS, backgroundReleaseChecks.value)
             .putBoolean(KEY_BACKGROUND_RELEASE_CHECKS_MIGRATED, true)
             .apply()
         crossfadeSeconds.value = prefs.getInt(KEY_CROSSFADE, 0)
@@ -1849,11 +1850,10 @@ object AppSettings {
         prefs.edit().putBoolean(KEY_SYNC_DOWNLOADED_PLAYLISTS, value).apply()
     }
 
-    fun setBackgroundReleaseChecks(context: Context, @Suppress("UNUSED_PARAMETER") value: Boolean) {
-        // Automatic/background release checks removed; updates are manual from Settings.
-        backgroundReleaseChecks.value = false
-        prefs.edit().putBoolean(KEY_BACKGROUND_RELEASE_CHECKS, false).apply()
-        com.music.bitchord.update.ReleaseUpdateScheduler.cancel(context)
+    fun setBackgroundReleaseChecks(context: Context, value: Boolean) {
+        backgroundReleaseChecks.value = value
+        prefs.edit().putBoolean(KEY_BACKGROUND_RELEASE_CHECKS, value).apply()
+        com.music.bitchord.update.ReleaseUpdateScheduler.applyBackgroundCheckSetting(context, value)
     }
 
     fun setLastfmPrimaryArtistOnly(value: Boolean) {

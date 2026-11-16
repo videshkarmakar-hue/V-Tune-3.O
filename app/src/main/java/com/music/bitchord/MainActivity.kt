@@ -198,7 +198,6 @@ import com.music.bitchord.playback.LinkRequest
 import com.music.bitchord.playback.MusicLink
 import com.music.bitchord.playback.OriginalVersion
 import com.music.bitchord.playback.PlayerDeepLink
-import com.music.bitchord.data.AppUpdateManager
 import com.music.bitchord.update.ReleaseUpdateTracker
 import com.music.bitchord.playback.QueueBuilder
 import com.music.bitchord.playback.QueueCoordinator
@@ -402,11 +401,8 @@ class MainActivity : AppCompatActivity() {
         JamInviteLink.consume(intent)
         // Likewise for a link tapped or shared from another app — see [MusicLink].
         MusicLink.consume(intent)
-        if (intent.getBooleanExtra(ReleaseUpdateTracker.EXTRA_OPEN_UPDATE, false)) {
-            // Clear any snooze so the update screen can be presented.
-            AppUpdateManager.snooze(this, durationMs = 0L)
-            AppUpdateManager.loadPreferences(this)
-        }
+        // An update notification was tapped; the composition opens Settings → App Update.
+        ReleaseUpdateTracker.consumeOpen(intent)
         setContent {
             val theme by AppSettings.themeMode.collectAsStateWithLifecycle()
             val appFont by AppSettings.appFont.collectAsStateWithLifecycle()
@@ -511,10 +507,7 @@ class MainActivity : AppCompatActivity() {
         // Replaces what getIntent() returns, so the extra this consumes is the
         // one that just arrived and not the one the task was started with.
         setIntent(intent)
-        if (intent.getBooleanExtra(ReleaseUpdateTracker.EXTRA_OPEN_UPDATE, false)) {
-            AppUpdateManager.snooze(this, durationMs = 0L) // clear snooze so update screen can show
-            AppUpdateManager.loadPreferences(this)
-        }
+        ReleaseUpdateTracker.consumeOpen(intent)
         PlayerDeepLink.consume(intent)
         JamInviteLink.consume(intent)
         MusicLink.consume(intent)
@@ -833,6 +826,20 @@ private fun BitChordApp(
     // [AppNavigator]. Whatever was opened last is what is on screen, and back
     // (the gesture or the bar's button alike) undoes exactly that.
     val navigator = viewModel.navigator
+    // A tapped "update available" notification asks for the App Update page, and this is
+    // the half that can serve it — the activity only relays the intent. It opens the page
+    // over Settings rather than over whatever was playing, so closing it lands somewhere
+    // the update can be found again. Nothing is downloaded until the button there is pressed.
+    val updatePageRequested by ReleaseUpdateTracker.pendingOpen.collectAsStateWithLifecycle()
+    LaunchedEffect(updatePageRequested) {
+        if (!updatePageRequested) return@LaunchedEffect
+        dismissPlayer()
+        replayStory = null
+        showReplayShare = false
+        webSession = null
+        navigator.pushAll(AppRoute.Settings, AppRoute.SettingsSection(SettingsCategory.UPDATES))
+        ReleaseUpdateTracker.handled()
+    }
     val detailStack by viewModel.detailStack.collectAsStateWithLifecycle()
     val topEntry = navigator.visibleEntry(detailStack.size)
     // An artist's open shelf is drawn by the artist page itself, so it is not a
