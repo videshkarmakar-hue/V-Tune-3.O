@@ -277,7 +277,7 @@ fun TvSettingsScreen(
                 TvListRow(
                     title = "Appearance",
                     value = AppThemeOption.fromId(themeId).title,
-                    onFocused = { blurb = "The background behind BitChord's pages." },
+                    onFocused = { blurb = "The background behind V-Tune's pages." },
                     onClick = { sheet = SettingsSheet.Theme },
                 )
             }
