@@ -326,6 +326,12 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
+    // Firebase Cloud Messaging for release/update push notifications (topic: app-updates).
+    // The TV app compiles the phone app's sources (see sourceSets above), so the
+    // phone-only dependencies those files reach through must be declared here too.
+    implementation(platform("com.google.firebase:firebase-bom:34.8.0"))
+    implementation("com.google.firebase:firebase-messaging")
+
     // ---- Android TV (Compose for TV) ----
     implementation("androidx.tv:tv-material:1.0.0")
     implementation("androidx.tv:tv-foundation:1.0.0-alpha12")
