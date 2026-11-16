@@ -25,7 +25,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -72,7 +71,7 @@ fun SoftwareUpdateScreen(
     var checking by remember { mutableStateOf(false) }
     var checkFailed by remember { mutableStateOf(false) }
 
-    fun runCheck(force: Boolean = true) {
+    fun runCheck() {
         if (checking) return
         checking = true
         checkFailed = false
@@ -80,12 +79,13 @@ fun SoftwareUpdateScreen(
             val result = runCatching { AppUpdateManager.checkForUpdates(context) }.getOrNull()
             checkFailed = result == AppUpdateManager.ManualCheck.Unreachable
             checking = false
+            onCheckForUpdates?.invoke()
         }
     }
 
     LaunchedEffect(Unit) {
         AppUpdateManager.loadPreferences(context.applicationContext)
-        runCheck(force = true)
+        runCheck()
     }
 
     val bg = Brush.radialGradient(
@@ -127,12 +127,12 @@ fun SoftwareUpdateScreen(
                 onPrimary = {
                     val info = pending
                     if (info == null) {
-                        runCheck(force = true)
-                        onCheckForUpdates?.invoke()
+                        runCheck()
                         return@UpdateStatusCard
                     }
-                    when (val d = download) {
-                        is AppUpdateManager.DownloadState.Ready -> AppUpdateManager.installApk(context, d.file)
+                    when (download) {
+                        is AppUpdateManager.DownloadState.Ready ->
+                            AppUpdateManager.installApk(context, (download as AppUpdateManager.DownloadState.Ready).file)
                         is AppUpdateManager.DownloadState.Downloading -> Unit
                         is AppUpdateManager.DownloadState.Failed,
                         is AppUpdateManager.DownloadState.Idle -> {
@@ -144,7 +144,7 @@ fun SoftwareUpdateScreen(
                                     checkFailed = false
                                     val refreshed = runCatching { AppUpdateManager.check(context, force = true) }.getOrNull()
                                     checking = false
-                                    checkFailed = refreshed == null && AppUpdateManager.lastCheckedWallMs.value == lastChecked
+                                    checkFailed = refreshed == null
                                     val apkUrl = refreshed?.apkUrl ?: AppUpdateManager.pending.value?.apkUrl
                                     if (!apkUrl.isNullOrBlank()) {
                                         AppUpdateManager.startDownload(context)
@@ -155,6 +155,10 @@ fun SoftwareUpdateScreen(
                     }
                 },
             )
+
+            Spacer(Modifier.height(16.dp))
+
+            LastCheckedRow(lastCheckedMs = lastChecked, checking = checking)
 
             Spacer(Modifier.height(24.dp))
         }
@@ -196,20 +200,7 @@ private fun UpdateHeader(showBack: Boolean, onBack: (() -> Unit)?) {
             fontWeight = FontWeight.Bold,
         )
 
-        IconButton(
-            onClick = { },
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(Color(0xFF242634))
-                .border(1.dp, Color(0x388A93BB), CircleShape),
-        ) {
-            Icon(
-                Icons.Outlined.Info,
-                contentDescription = null,
-                tint = Color(0xFFB8BED6),
-            )
-        }
+        Spacer(Modifier.size(40.dp))
     }
 }
 
@@ -225,335 +216,4 @@ private fun AppIdentityBlock(installedVersion: String, hasUpdate: Boolean) {
                     .size(64.dp)
                     .clip(RoundedCornerShape(20.dp))
                     .background(
-                        Brush.linearGradient(
-                            listOf(Color(0xFF373A4D), Color(0xFF292B39), Color(0xFF1A1C25))
-                        )
-                    )
-                    .border(1.dp, Color(0x598A93BB), RoundedCornerShape(20.dp)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Image(
-                    painter = painterResource(R.drawable.ic_logo),
-                    contentDescription = null,
-                    modifier = Modifier.size(42.dp),
-                    contentScale = ContentScale.Fit,
-                )
-            }
-            if (hasUpdate) {
-                Box(
-                    modifier = Modifier
-                        .size(14.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF6C7BB8))
-                        .border(2.dp, Color(0xFF14151D), CircleShape),
-                )
-            }
-        }
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = "V-Tune 3.O",
-            color = Color.White,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-        )
-        Spacer(Modifier.height(6.dp))
-        Box(
-            modifier = Modifier
-                .clip(CircleShape)
-                .background(Color(0xB3242633))
-                .border(1.dp, Color(0x338A93BB), CircleShape)
-                .padding(horizontal = 12.dp, vertical = 4.dp),
-        ) {
-            Text(
-                text = "Current: v$installedVersion",
-                color = Color(0xFF9CA3BF),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-            )
-        }
-    }
-}
-
-@Composable
-private fun UpdateStatusCard(
-    pending: AppUpdateManager.UpdateInfo?,
-    download: AppUpdateManager.DownloadState,
-    onPrimary: () -> Unit,
-    onRemindLater: (() -> Unit)?,
-) {
-    val downloading = download as? AppUpdateManager.DownloadState.Downloading
-    val ready = download as? AppUpdateManager.DownloadState.Ready
-    val failed = download as? AppUpdateManager.DownloadState.Failed
-
-    val title = if (pending != null) "Version ${pending.version}" else "You're up to date"
-    val statusLabel = when {
-        pending == null -> "Up to date"
-        ready != null -> "Ready to Install"
-        downloading != null -> "Downloading"
-        failed != null -> "Download failed"
-        else -> "Update available"
-    }
-    val primaryText = when {
-        pending == null -> stringResource(R.string.check_for_update)
-        downloading != null -> "Downloading ${(downloading.fraction * 100).toInt()}%"
-        ready != null -> stringResource(R.string.install_now)
-        failed != null -> stringResource(R.string.try_again)
-        else -> stringResource(R.string.download_update)
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color(0xD9292B39), Color(0xCC1E202C))
-                )
-            )
-            .border(1.dp, Color(0x408A93BB), RoundedCornerShape(16.dp))
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top,
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                if (pending?.notes?.isNotBlank() == true) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        pending.notes.lineSequence().firstOrNull().orEmpty().take(120),
-                        color = Color(0xFF9CA3BF),
-                        fontSize = 12.sp,
-                        maxLines = 2,
-                    )
-                }
-            }
-            Box(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(Color(0x296C7BB8))
-                    .border(1.dp, Color(0x598A93BB), CircleShape)
-                    .padding(horizontal = 8.dp, vertical = 3.dp),
-            ) {
-                Text(
-                    statusLabel,
-                    color = Color(0xFFB8C2EC),
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-        }
-
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (downloading == null) Brush.linearGradient(listOf(Color(0xFFF5F7FF), Color(0xFFE3E7FA)))
-                        else Brush.linearGradient(listOf(Color(0x88B8BED6), Color(0x889CA3BF)))
-                    )
-                    .clickable(enabled = downloading == null) { onPrimary() },
-                contentAlignment = Alignment.Center,
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Download, contentDescription = null, tint = Color(0xFF161722), modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(primaryText, color = Color(0xFF161722), fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                }
-            }
-
-            if (downloading != null) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(4.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(Color(0x22FFFFFF)),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(downloading.fraction.coerceIn(0f, 1f))
-                            .height(4.dp)
-                            .background(Color(0xFF7C8BD4)),
-                    )
-                }
-            }
-
-            if (onRemindLater != null && pending != null && ready == null) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(42.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xB3242633))
-                        .border(1.dp, Color(0x338A93BB), CircleShape)
-                        .clickable { onRemindLater() },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        stringResource(R.string.remind_me_later),
-                        color = Color(0xFFB8BED6),
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 13.sp,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun UpdatePreferencesSection(
-    autoWifi: Boolean,
-    allowCellular: Boolean,
-    frequency: AppUpdateManager.CheckFrequency,
-    lastCheckedMs: Long,
-    onAutoWifi: (Boolean) -> Unit,
-    onAllowCellular: (Boolean) -> Unit,
-    onFrequency: (AppUpdateManager.CheckFrequency) -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val context = LocalContext.current
-    val lastCheckedText = if (lastCheckedMs > 0L) {
-        val df = DateFormat.getMediumDateFormat(context)
-        val tf = DateFormat.getTimeFormat(context)
-        val d = Date(lastCheckedMs)
-        "${df.format(d)}, ${tf.format(d)}"
-    } else "Not checked yet"
-
-    Column {
-        Text(
-            text = "UPDATE PREFERENCES",
-            color = Color(0xFF9CA3BF),
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-            letterSpacing = 0.8.sp,
-            modifier = Modifier.padding(bottom = 10.dp, start = 2.dp),
-        )
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color(0xB3222430))
-                .border(1.dp, Color(0x388A93BB), RoundedCornerShape(16.dp)),
-        ) {
-            PrefToggleRow(
-                title = "Auto-Update over Wi-Fi",
-                subtitle = "Automatically download updates when connected to Wi-Fi",
-                checked = autoWifi,
-                onCheckedChange = onAutoWifi,
-                showDivider = true,
-            )
-            PrefToggleRow(
-                title = "Download over Cellular Data",
-                subtitle = "Carrier data charges may apply",
-                checked = allowCellular,
-                onCheckedChange = onAllowCellular,
-                showDivider = true,
-            )
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { expanded = !expanded }
-                    .padding(14.dp),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Check Frequency", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                        Spacer(Modifier.height(2.dp))
-                        Text("Last checked: $lastCheckedText", color = Color(0xFF9CA3BF), fontSize = 11.sp)
-                    }
-                    Row(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(Color(0xFF242634))
-                            .border(1.dp, Color(0x408A93BB), CircleShape)
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(frequencyLabel(frequency), color = Color(0xFFD7DCF0), fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                        Spacer(Modifier.width(6.dp))
-                        Icon(Icons.Rounded.ExpandMore, contentDescription = null, tint = Color(0xFF7C86A3), modifier = Modifier.size(16.dp))
-                    }
-                }
-                if (expanded) {
-                    Spacer(Modifier.height(10.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        AppUpdateManager.CheckFrequency.entries.forEach { opt ->
-                            val selected = opt == frequency
-                            Box(
-                                modifier = Modifier
-                                    .clip(CircleShape)
-                                    .background(if (selected) Color(0xFF6C7BB8) else Color(0xFF242634))
-                                    .border(1.dp, Color(0x408A93BB), CircleShape)
-                                    .clickable { onFrequency(opt); expanded = false }
-                                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                            ) {
-                                Text(frequencyLabel(opt), color = if (selected) Color.White else Color(0xFFB8BED6), fontSize = 12.sp)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PrefToggleRow(
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    showDivider: Boolean,
-) {
-    Column {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f).padding(end = 12.dp)) {
-                Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                Spacer(Modifier.height(2.dp))
-                Text(subtitle, color = Color(0xFF9CA3BF), fontSize = 11.sp)
-            }
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
-                    checkedTrackColor = Color(0xFF6C7BB8),
-                    uncheckedThumbColor = Color(0xFF5D627A),
-                    uncheckedTrackColor = Color(0xFF1F212D),
-                    uncheckedBorderColor = Color(0x408A93BB),
-                ),
-            )
-        }
-        if (showDivider) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(Color(0xFF232326)),
-            )
-        }
-    }
-}
-
-private fun frequencyLabel(f: AppUpdateManager.CheckFrequency): String = when (f) {
-    AppUpdateManager.CheckFrequency.DAILY -> "Daily"
-    AppUpdateManager.CheckFrequency.WEEKLY -> "Weekly"
-    AppUpdateManager.CheckFrequency.MANUAL -> "Manual"
-}
+                      
