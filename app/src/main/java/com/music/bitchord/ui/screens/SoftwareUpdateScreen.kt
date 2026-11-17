@@ -136,6 +136,8 @@ fun SoftwareUpdateScreen(
     }
 
     val info = pending
+    val hasDirectApk = !info?.apkUrl.isNullOrBlank()
+    val directDownloadUnavailable = info != null && !hasDirectApk
     val primaryAction: () -> Unit = {
         when (val state = download) {
             is AppUpdateManager.DownloadState.Ready -> AppUpdateManager.installApk(context, state.file)
@@ -144,8 +146,8 @@ fun SoftwareUpdateScreen(
             is AppUpdateManager.DownloadState.Idle -> {
                 when {
                     info == null -> checkNow()
-                    !info.apkUrl.isNullOrBlank() -> AppUpdateManager.startDownload(app)
-                    else -> AppUpdateManager.openReleasePage(app)
+                    hasDirectApk -> AppUpdateManager.startDownload(app)
+                    else -> Unit // no direct APK: stay in-app, never open GitHub
                 }
             }
         }
@@ -374,6 +376,8 @@ private fun UpdateCard(
         else -> stringResource(R.string.update_up_to_date)
     }
 
+    val directUnavailable = info != null && !hasApk && ready == null && downloading == null && failed == null
+
     val badge = when {
         checking && info == null -> "Checking"
         info == null && checkFailed -> "Unavailable"
@@ -381,6 +385,7 @@ private fun UpdateCard(
         ready != null -> "Ready to Install"
         downloading != null -> "Downloading"
         failed != null -> "Download Failed"
+        directUnavailable -> "No direct download"
         else -> "Update Available"
     }
 
@@ -393,7 +398,7 @@ private fun UpdateCard(
         downloading != null -> "Downloading the update. Keep this screen open until it finishes."
         failed != null -> failed.message.takeIf { it.isNotBlank() }
             ?: "The download couldn't be completed. Try again."
-        !hasApk -> "A new version is available. Tap Update Download to get it."
+        directUnavailable -> "Version ${info.version} is available, but a direct in-app download isn’t available for this release."
         else -> "A new version is available. Download it when you're ready."
     }
 
@@ -402,7 +407,7 @@ private fun UpdateCard(
         ready != null -> stringResource(R.string.install_now)
         info != null && failed != null -> stringResource(R.string.try_again)
         info != null && hasApk -> stringResource(R.string.download_update)
-        info != null -> stringResource(R.string.open_download_page)
+        directUnavailable -> "Direct download unavailable"
         checking -> stringResource(R.string.checking_for_update)
         else -> stringResource(R.string.check_for_update)
     }
@@ -410,8 +415,16 @@ private fun UpdateCard(
     val primaryIcon = when {
         info == null -> Icons.Rounded.Refresh
         failed != null -> Icons.Rounded.Refresh
+        directUnavailable -> Icons.Rounded.Info
         hasApk -> Icons.Rounded.Download
-        else -> Icons.Rounded.Download
+        else -> Icons.Rounded.Refresh
+    }
+
+    val primaryEnabled = when {
+        downloading != null -> false
+        directUnavailable -> false
+        checking && info == null -> false
+        else -> true
     }
 
     Column(
@@ -467,26 +480,27 @@ private fun UpdateCard(
                 .height(50.dp)
                 .clip(CircleShape)
                 .background(
-                    if (downloading == null) {
+                    if (primaryEnabled) {
                         Brush.linearGradient(listOf(Color(0xFFF5F7FF), Color(0xFFE3E7FA)))
                     } else {
                         Brush.linearGradient(listOf(Color(0x88B8BED6), Color(0x889CA3BF)))
                     },
                 )
-                .clickable(enabled = downloading == null) { onPrimary() },
+                .clickable(enabled = primaryEnabled) { onPrimary() },
             contentAlignment = Alignment.Center,
         ) {
+            val contentColor = if (primaryEnabled) Color(0xFF161722) else Color(0x99161722)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     primaryIcon,
                     contentDescription = null,
-                    tint = Color(0xFF161722),
+                    tint = contentColor,
                     modifier = Modifier.size(17.dp),
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = primaryText,
-                    color = Color(0xFF161722),
+                    color = contentColor,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
