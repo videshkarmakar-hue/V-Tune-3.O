@@ -137,7 +137,6 @@ fun SoftwareUpdateScreen(
 
     val info = pending
     val hasDirectApk = !info?.apkUrl.isNullOrBlank()
-    val directDownloadUnavailable = info != null && !hasDirectApk
     val primaryAction: () -> Unit = {
         when (val state = download) {
             is AppUpdateManager.DownloadState.Ready -> AppUpdateManager.installApk(context, state.file)
@@ -147,7 +146,10 @@ fun SoftwareUpdateScreen(
                 when {
                     info == null -> checkNow()
                     hasDirectApk -> AppUpdateManager.startDownload(app)
-                    else -> Unit // no direct APK: stay in-app, never open GitHub
+                    // The release has no APK this app can fetch. The button stays
+                    // live: re-checking is what picks the file up when it is
+                    // attached later, and nothing here ever opens GitHub.
+                    else -> checkNow()
                 }
             }
         }
@@ -385,7 +387,6 @@ private fun UpdateCard(
         ready != null -> "Ready to Install"
         downloading != null -> "Downloading"
         failed != null -> "Download Failed"
-        directUnavailable -> "No direct download"
         else -> "Update Available"
     }
 
@@ -398,7 +399,7 @@ private fun UpdateCard(
         downloading != null -> "Downloading the update. Keep this screen open until it finishes."
         failed != null -> failed.message.takeIf { it.isNotBlank() }
             ?: "The download couldn't be completed. Try again."
-        directUnavailable -> "Version ${info.version} is available, but a direct in-app download isn’t available for this release."
+        directUnavailable -> "Version ${info.version} is available, but no APK is attached to this release yet. Tap Download Update to check again."
         else -> "A new version is available. Download it when you're ready."
     }
 
@@ -406,26 +407,19 @@ private fun UpdateCard(
         downloading != null -> "Downloading $percent%"
         ready != null -> stringResource(R.string.install_now)
         info != null && failed != null -> stringResource(R.string.try_again)
-        info != null && hasApk -> stringResource(R.string.download_update)
-        directUnavailable -> "Direct download unavailable"
+        info != null -> stringResource(R.string.download_update)
         checking -> stringResource(R.string.checking_for_update)
         else -> stringResource(R.string.check_for_update)
     }
 
     val primaryIcon = when {
         info == null -> Icons.Rounded.Refresh
-        failed != null -> Icons.Rounded.Refresh
-        directUnavailable -> Icons.Rounded.Info
-        hasApk -> Icons.Rounded.Download
-        else -> Icons.Rounded.Refresh
+        else -> Icons.Rounded.Download
     }
 
-    val primaryEnabled = when {
-        downloading != null -> false
-        directUnavailable -> false
-        checking && info == null -> false
-        else -> true
-    }
+    // Only a download in flight or a check with nothing to show is a reason to
+    // ignore a tap; every other state stays actionable.
+    val primaryEnabled = !(downloading != null || (checking && info == null))
 
     Column(
         modifier = Modifier

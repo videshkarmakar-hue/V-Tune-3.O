@@ -181,7 +181,6 @@
     <string name="update_downloading_button">Downloading %1$d%%</string>
     <string name="install_update">Install Update</string>
     <string name="retry_update">Try Again</string>
-    <string name="open_download_page">Update Download</string>
     <!-- Settings → App Update: manual in-app updates. -->
     <string name="updates">Updates</string>
     <string name="check_for_updates">App Update</string>

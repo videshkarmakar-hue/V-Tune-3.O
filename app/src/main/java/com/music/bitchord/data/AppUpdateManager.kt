@@ -83,6 +83,9 @@ object AppUpdateManager {
 
     private const val CACHE_SUBDIR = "updates"
 
+    /** Ordered longest-first, so `x86_64` is recognised before plain `x86`. */
+    private val KNOWN_ABIS = listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
+
     /** The release that gated the last session, so force-stopping the app is not an escape hatch. */
     private const val UPDATE_PREFS = "vtune_update"
     private const val KEY_PENDING_RELEASE = "pending_release"
@@ -380,23 +383,48 @@ object AppUpdateManager {
      * with neither leaves [UpdateInfo.apkUrl] null and the gate falls back to
      * the release page rather than pretending it can install anything.
      */
+    /**
+     * Picks the APK to download out of a release's assets.
+     *
+     * The [BuildConfig.UPDATE_APK_PREFIX] is a preference, not a requirement.
+     * Releases built by this project's CI call their files
+     * `app-prod-<abi>-debug.apk`, so a release whose assets carry none of the
+     * expected prefix still has an APK in it — treating that as "no direct
+     * download" is what left the App Update page unable to update anything.
+     * Prefixed assets win when a release mixes app files with the TV and watch
+     * files that share it; otherwise every uploaded APK is a candidate.
+     *
+     * Among the candidates a universal build is preferred, then the first one
+     * matching one of this device's ABIs, and only then whatever is left.
+     */
     private fun apkAssetUrl(release: JsonObject): String? = runCatching {
-        val apks = release["assets"]?.jsonArray
+        val all = release["assets"]?.jsonArray
             ?.mapNotNull { it as? JsonObject }
             ?.mapNotNull { asset ->
                 val name = asset["name"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
                 val url = asset["browser_download_url"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
-                val ours = name.startsWith(BuildConfig.UPDATE_APK_PREFIX, ignoreCase = true) &&
-                    name.endsWith(".apk", ignoreCase = true) &&
-                    asset["state"]?.jsonPrimitive?.contentOrNull == "uploaded"
-                if (ours) name.removeSuffix(".apk").removeSuffix(".APK") to url else null
+                val uploaded = asset["state"]?.jsonPrimitive?.contentOrNull == "uploaded" &&
+                    name.endsWith(".apk", ignoreCase = true)
+                if (uploaded) name to url else null
             }
             .orEmpty()
-        apks.firstOrNull { (name, _) -> '_' !in name }?.second
+        if (all.isEmpty()) return@runCatching null
+
+        val prefixed = all.filter { (name, _) ->
+            name.startsWith(BuildConfig.UPDATE_APK_PREFIX, ignoreCase = true)
+        }
+        val candidates = prefixed.ifEmpty { all }
+
+        candidates.firstOrNull { (name, _) -> assetAbi(name) == null }?.second
             ?: Build.SUPPORTED_ABIS.firstNotNullOfOrNull { abi ->
-                apks.firstOrNull { (name, _) -> name.endsWith("_$abi") }?.second
+                candidates.firstOrNull { (name, _) -> assetAbi(name) == abi }?.second
             }
+            ?: candidates.first().second
     }.getOrNull()
+
+    /** The ABI an asset's file name advertises, or null when it is a universal build. */
+    private fun assetAbi(assetName: String): String? =
+        KNOWN_ABIS.firstOrNull { assetName.contains(it, ignoreCase = true) }
 
     /**
      * Streams the pending release's APK into the app cache, reporting progress
@@ -453,8 +481,8 @@ object AppUpdateManager {
                 }
             }
 
-            check(isThisAppAtLeast(context, target, info.version)) {
-                "The downloaded file is not V-Tune ${info.version}."
+            check(isInstallableUpdate(context, target)) {
+                "The downloaded file is not a newer V-Tune build."
             }
             // A newer release may have been published while this one was on the
             // wire. Installing it would satisfy the wrong gate, so the file is
@@ -542,16 +570,6 @@ object AppUpdateManager {
     }
 
     /** Opens the release page when the release carries no installable APK. */
-    fun openReleasePage(context: Context) {
-        val url = _pending.value?.releaseUrl ?: return
-        runCatching {
-            context.startActivity(
-                Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            )
-        }
-    }
-
     /**
      * Remembers (or forgets) the release that is gating this install, so the
      * gate survives the process being killed. A user who force-stops the app to
@@ -632,14 +650,25 @@ object AppUpdateManager {
      * leaving the gate up forever over a string mismatch.
      */
     @Suppress("DEPRECATION")
-    private fun isThisAppAtLeast(context: Context, file: File, version: String): Boolean {
+    /**
+     * Whether the file that just finished downloading is a V-Tune build this
+     * device can move to.
+     *
+     * It has to be this package, and its versionName must not be older than the
+     * installed one. The release *tag* is deliberately not the yardstick: a
+     * release whose APK was built without stamping its versionName still
+     * installs fine, and refusing it here is what made a downloaded file fail
+     * with "not V-Tune <tag>" and leave the page stuck on Update Available.
+     */
+    private fun isInstallableUpdate(context: Context, file: File): Boolean {
         if (!file.isFile || file.length() == 0L) return false
         val info = runCatching {
             context.packageManager.getPackageArchiveInfo(file.absolutePath, 0)
         }.getOrNull() ?: return false
         if (info.packageName != context.packageName) return false
         val apkVersion = info.versionName ?: return false
-        return !isNewer(version, apkVersion)
+        val installed = installedVersionName(context) ?: return true
+        return !isNewer(installed, apkVersion)
     }
 
     /** A version split into its numeric dotted parts and whether it carries a "-suffix" (e.g. "-beta2"). */
