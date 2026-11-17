@@ -628,7 +628,7 @@ object AppUpdateManager {
     private fun adoptCachedApk(context: Context, version: String) {
         if (_download.value is DownloadState.Downloading) return
         val file = File(File(context.cacheDir, CACHE_SUBDIR), "vtune-$version.apk")
-        if (isThisAppAtLeast(context, file, version)) {
+        if (isInstallableUpdate(context, file)) {
             _download.value = DownloadState.Ready(file)
         } else if (_download.value is DownloadState.Ready) {
             _download.value = DownloadState.Idle
@@ -640,16 +640,6 @@ object AppUpdateManager {
         context.packageManager.getPackageInfo(context.packageName, 0).versionName
     }.getOrNull()
 
-    /**
-     * The file really is this app, and really is the build the release promised.
-     *
-     * The package name is checked first so a mis-named asset can never be handed
-     * to the installer. The version test is "not older than" rather than "equal
-     * to": a release tagged `v1.0.1` whose APK reports `1.0.1` is the same build,
-     * and a build that carries a local suffix should still install instead of
-     * leaving the gate up forever over a string mismatch.
-     */
-    @Suppress("DEPRECATION")
     /**
      * Whether the file that just finished downloading is a V-Tune build this
      * device can move to.
